@@ -1,0 +1,18 @@
+# Arquivos de cache do Python (gerados automaticamente)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Banco de dados (para não enviar seus dados de teste/reais)
+*.db
+*.sqlite3
+
+# Ambientes virtuais (pastas de instalação de bibliotecas)
+venv/
+.venv/
+env/
+
+# Configurações de editores/IDEs
+.vscode/
+.idea/
+.project
