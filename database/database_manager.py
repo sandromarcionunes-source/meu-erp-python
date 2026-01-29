@@ -7,9 +7,12 @@ class SQLiteDatabaseManager(DatabaseInterface):
 
     def __init__(self, db_name='empresa_sanxi.db'):
         # 1. Configuração do Caminho (Flexibilida de)
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.db_path = os.path.join(base_dir, 'data', db_name)
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        if db_name == ":memory:":
+            self.db_path = ":memory:"
+        else:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            self.db_path = os.path.join(base_dir, 'data', db_name)
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
         # 2. Conexão
         self.connection = sqlite3.connect(self.db_path)
