@@ -11,15 +11,16 @@ class EntidadeRepository:  # <--- Nome exato exigido pelo seu main.py
         """Salva a entidade principal e dispara o salvamento de sócios se houver"""
         query = """
             INSERT INTO entidades (
-                tipo_pessoa, nome_fantasia, razao_social, documento, 
+                tipo_pessoa, nome_fantasia, razao_social, documento, inscricao_estadual, inscricao_municipal,
                 email, telefone, cep, endereco, numero, complemento, 
                 bairro, cidade, uf, limite_credito, eh_cliente, 
                 eh_fornecedor, eh_transportadora, data_cadastramento, observacoes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         params = (
             entidade.tipo_pessoa, entidade.nome_fantasia, entidade.razao_social,
-            entidade.documento, entidade.email, entidade.telefone,
+            entidade.documento, entidade.inscricao_estadual, entidade.inscricao_municipal ,
+            entidade.email, entidade.telefone,
             entidade.cep, entidade.endereco, entidade.numero,
             entidade.complemento, entidade.bairro, entidade.cidade,
             entidade.uf, entidade.limite_credito,
@@ -55,57 +56,6 @@ class EntidadeRepository:  # <--- Nome exato exigido pelo seu main.py
                 s.cargo
             ))
 
-    # def buscar_por_id(self, entidade_id: int) -> Entidade | None:
-    #     """Recupera uma entidade completa com seus sócios e respectivos períodos"""
-    #     row = self.db.fetch_one("SELECT * FROM entidades WHERE id = ?", (entidade_id,))
-    #     if not row:
-    #         return None
-    #
-    #     entidade = Entidade(
-    #         id=row['id'],
-    #         tipo_pessoa=row['tipo_pessoa'],
-    #         nome_fantasia=row['nome_fantasia'],
-    #         razao_social=row['razao_social'],
-    #         documento=row['documento'],
-    #         email=row['email'],
-    #         telefone=row['telefone'],
-    #         cep=row['cep'],
-    #         endereco=row['endereco'],
-    #         numero=row['numero'],
-    #         complemento=row['complemento'],
-    #         bairro=row['bairro'],
-    #         cidade=row['cidade'],
-    #         uf=row['uf'],
-    #         limite_credito=row['limite_credito'],
-    #         eh_cliente=bool(row['eh_cliente']),
-    #         eh_fornecedor=bool(row['eh_fornecedor']),
-    #         eh_transportadora=bool(row['eh_transportadora']),
-    #         data_cadastramento=row['data_cadastramento'],
-    #         observacoes=row['observacoes']
-    #     )
-    #
-    #     # Busca sócios trazendo as datas gravadas
-    #     query_socios = """
-    #                 SELECT s.*, e.nome_fantasia as nome_socio
-    #                 FROM socios s
-    #                 JOIN entidades e ON s.socio_entidade_id = e.id
-    #                 WHERE s.entidade_pai_id = ?
-    #             """
-    #     rows_s = self.db.fetch_all(query_socios, (entidade_id,))
-    #
-    #     for rs in rows_s:
-    #         socio_obj = Socio(
-    #             socio_entidade_id=rs['socio_entidade_id'],
-    #             participacao=rs['percentual_participacao'],  # Nome da coluna no seu SQL
-    #             data_entrada=rs['data_entrada'],
-    #             data_saida=rs['data_saida'],
-    #             cargo=rs['cargo'],
-    #             nome_snapshot=rs['nome_socio'],  # O apelido que demos no JOIN
-    #             id=rs['id']
-    #         )
-    #         entidade.socios.append(socio_obj)
-    #
-    #     return entidade
 
     def buscar_por_id(self, entidade_id: int) -> Entidade | None:
         row = self.db.fetch_one("SELECT * FROM entidades WHERE id = ?", (entidade_id,))
@@ -114,8 +64,9 @@ class EntidadeRepository:  # <--- Nome exato exigido pelo seu main.py
         entidade = Entidade(
             id=row['id'], tipo_pessoa=row['tipo_pessoa'],
             nome_fantasia=row['nome_fantasia'], razao_social=row['razao_social'],
-            documento=row['documento'], email=row['email'], telefone=row['telefone'],
-            eh_cliente=bool(row['eh_cliente']), eh_fornecedor=bool(row['eh_fornecedor']),
+            documento=row['documento'], inscricao_estadual=row['inscricao_estadual'],
+            inscricao_municipal=row['inscricao_municipal'],email=row['email'],
+            telefone=row['telefone'],eh_cliente=bool(row['eh_cliente']), eh_fornecedor=bool(row['eh_fornecedor']),
             eh_transportadora=bool(row['eh_transportadora']),
             data_cadastramento=row['data_cadastramento'], observacoes=row['observacoes']
         )
@@ -204,10 +155,6 @@ class EntidadeRepository:  # <--- Nome exato exigido pelo seu main.py
         query = "UPDATE socios SET data_saida = ? WHERE id = ?"
         self.db.execute(query, (data_saida, socio_id))
 
-    # def buscar_clientes(self):
-    #     """Busca apenas as entidades que são clientes"""
-    #     sql = "SELECT * FROM entidades WHERE eh_cliente = 1 ORDER BY nome_fantasia"
-    #     return self.db.fetch_all(sql)
 
     def buscar_clientes(self):
         """Busca as entidades e converte cada uma em objeto completo"""

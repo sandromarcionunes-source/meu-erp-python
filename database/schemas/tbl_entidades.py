@@ -7,6 +7,8 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         nome_fantasia TEXT NOT NULL,
         razao_social TEXT,
         documento TEXT UNIQUE NOT NULL,
+        inscricao_estadual TEXT,
+        inscricao_municipal TEXT,
         email TEXT,
         telefone TEXT,
         cep TEXT,

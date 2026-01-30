@@ -65,6 +65,8 @@ class EntidadeService:
 
         nome_fantasia = input("Nome Fantasia / Nome Completo: ").strip()
         razao_social = input("Razão Social (Enter se igual): ").strip() or nome_fantasia
+        inscricao_estadual = input("Inscrição estadual: ").strip()
+        inscricao_municipal = input("Inscrição municipal(Se não tiver, não preencher): ").strip()
         email = input("E-mail: ").strip()
         telefone = input("Telefone: ").strip()
 
@@ -89,6 +91,8 @@ class EntidadeService:
             nome_fantasia=nome_fantasia,
             razao_social=razao_social,
             documento=documento,
+            inscricao_estadual=inscricao_estadual,
+            inscricao_municipal=inscricao_municipal,
             email=email,
             telefone=telefone,
             cep=cep,
@@ -208,7 +212,6 @@ class EntidadeService:
 
 
 
-
     def registrar_saida_socio(self):
         id_empresa = input("\n🏢 ID da Empresa (PJ): ")
         empresa = self.repo.buscar_por_id(id_empresa)
@@ -259,6 +262,8 @@ class EntidadeService:
         campos = [
             ("Nome Fantasia", "nome_fantasia", ent.nome_fantasia),
             ("Razão Social", "razao_social", ent.razao_social),
+            ("Inscrição estadual", "inscricao_estadual", ent.inscricao_estadual),
+            ("Inscrição municipal", "inscricao_municipal", ent.inscricao_municipal),
             ("E-mail", "email", ent.email),
             ("Telefone", "telefone", ent.telefone),
             ("CEP", "cep", ent.cep),
@@ -297,13 +302,13 @@ class EntidadeService:
 
         for c in clientes:
             # Como 'c' é um objeto, usamos o ponto (.)
-            print(f"{c.id:03}  | {c.nome_fantasia[:35]:<35} | {c.documento:<15} | {c.tipo_pessoa}")
+            print(f"{c.id:03}  | {c.nome_fantasia[:35]:<35} | {c.documento:<15} | {c.tipo_pessoa} ")
 
             # LADO A: Se for Empresa (PJ), mostra quem são os sócios dela
             if c.tipo_pessoa == 'PJ':
                 if c.socios:
                     for s in c.socios:
-                        print(f"     └─ [Quadro societário] {s.cargo}: {s.nome_snapshot}")
+                        print(f"     └─ [Quadro societário] {s.cargo}: {s.nome_snapshot}  Participação=> {s.participacao} %")
                 else:
                     print("     └─ (Nenhum sócio vinculado)")
 
@@ -313,7 +318,7 @@ class EntidadeService:
                 participacoes = getattr(c, 'participacoes_societarias', [])
                 if participacoes:
                     for p in participacoes:
-                        print(f"     └─ [É Sócio na Empresa] {p['nome_empresa']} ({p['cargo']})")
+                        print(f"     └─ [É Sócio na Empresa] {p['nome_empresa']} ({p['cargo']}) | Participação: {p['percentual_participacao']}% ")
                 else:
                     print("     └─ [Pessoa Física sem participações]")
 

@@ -7,6 +7,8 @@ class Entidade:
         nome_fantasia: str,
         documento: str,
         razao_social: str | None = None,
+        inscricao_estadual: str | None = None,
+        inscricao_municipal: str | None = None,
         email: str | None = None,
         telefone: str | None = None,
         cep: str | None = None,
@@ -28,6 +30,8 @@ class Entidade:
         self.tipo_pessoa = tipo_pessoa.upper()
         self.nome_fantasia = nome_fantasia
         self.documento = documento
+        self.inscricao_estadual = inscricao_estadual or ""
+        self.inscricao_municipal = inscricao_municipal or ""
         self.razao_social = razao_social or nome_fantasia
         self.email = email
         self.telefone = telefone

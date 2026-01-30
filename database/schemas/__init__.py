@@ -8,6 +8,8 @@ from .tbl_configuracoes import CREATE_TABLE_CONFIGURACOES as configuracoes_sql
 from .tbl_configuracoes import INSERT_DEFAULT_CONFIGS as inicializar_configs_sql
 from .tbl_compras import CREATE_TABLE_COMPRAS_COMPLETO as compras_sql
 from .formas_pagamento_compras import CREATE_TABLE_FORMAS_PAGAMENTO_COMPRAS as formas_pagto_compras
+from .tbl_dados_emissor import CREATE_TABLE_DADOS_EMISSOR as dados_emissor_sql
+from .tbl_seguro import CREATE_TABLE_SEGUROS as seguro_sql
 
 # Lista com todas as tabelas para criação em lote
 ALL_TABLES = [
@@ -20,5 +22,7 @@ ALL_TABLES = [
     configuracoes_sql,      # 🆕 Criar tabela de configurações
     inicializar_configs_sql, # 🆕 Inserir os parâmetros padrão
     compras_sql,
-    formas_pagto_compras
+    formas_pagto_compras,
+    dados_emissor_sql,
+    seguro_sql,
 ]

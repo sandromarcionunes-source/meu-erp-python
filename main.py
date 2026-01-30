@@ -12,12 +12,16 @@ from repositories.entidade_repository import EntidadeRepository
 from repositories.forma_pagamento_repository import FormaPagamentoRepository
 from repositories.config_repository import ConfigRepository
 from repositories.compra_repository import CompraRepository
+from repositories.emissor_repository import EmissorRepository
+from repositories.seguro_repository import SeguroRepository
 from services.compra_service import CompraService
 from services.produto_service import ProdutoService
 from services.pedido_service import PedidoService
 from services.database_service import DatabaseService
 from services.entidade_service import EntidadeService
 from services.config_service import ConfigService
+from services.emissor_service import EmissorService
+from services.seguro_service import SeguroService
 from menus.menu_principal import MenuPrincipal
 
 
@@ -36,14 +40,18 @@ def main():
     repo_entidades = EntidadeRepository(db)
     repo_config = ConfigRepository(db)
     repo_compra = CompraRepository(db)
+    repo_emissor = EmissorRepository(db)
+    repo_seguro = SeguroRepository(db)
 
     # 3. Inicializa os Serviços
     service_entidade = EntidadeService(repo_entidades)
     service_produto = ProdutoService(repo_produto)
     service_pedido = PedidoService(repo_pedido,repo_entidades,repo_produto,repo_pagamento,repo_config)
     service_compra = CompraService(repo_compra, repo_entidades, repo_produto, repo_config)
+    service_seguro = SeguroService(repo_seguro, repo_entidades)
     service_configuracao = ConfigService(repo_config)
     service_banco_dados = DatabaseService(db)
+    service_emissor = EmissorService(repo_emissor)
 
     # 4. Configura o Menu Principal
     # Mapeamos as opções do menu para as funções 'exibir_menu' de cada serviço
@@ -52,9 +60,10 @@ def main():
         "2": {"nome": "Produtos", "funcao": service_produto.menu},
         "3": {"nome": "Pedidos", "funcao": service_pedido.exibir_menu},
         "4": {"nome": "Compras", "funcao": service_compra.exibir_menu},
-        # REMOVIDOS os parênteses de exibir_menu, pois queremos passar a função, não o resultado dela
-        "5": {"nome": "Configuracoes diversas", "funcao": service_configuracao.exibir_menu},
-        "6": {"nome": "Banco Dados", "funcao": service_banco_dados.exibir_menu},
+        "5": {"nome": "Emissor", "funcao": service_emissor.exibir_menu},
+        "6": {"nome": "Seguro", "funcao": service_seguro.exibir_menu},
+        "7": {"nome": "Configuracoes diversas", "funcao": service_configuracao.exibir_menu},
+        "8": {"nome": "Banco Dados", "funcao": service_banco_dados.exibir_menu},
     }
 
     menu = MenuPrincipal(modulos)
