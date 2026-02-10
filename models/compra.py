@@ -1,11 +1,10 @@
 class CompraItem:
-    def __init__(self, produto_id, produto_nome_snap, quantidade, valor_unitario):
+    def __init__(self, produto_id, produto_nome_snap, quantidade, preco_custo):
         self.produto_id = produto_id
-        self.produto_nome_snap = produto_nome_snap  # <--- ADICIONE ESTA LINHA
+        self.produto_nome_snap = produto_nome_snap
         self.quantidade = quantidade
-        self.valor_unitario = valor_unitario
-        self.subtotal = quantidade * valor_unitario
-        self.valor_total = self.subtotal
+        self.preco_custo = preco_custo
+        self.subtotal = quantidade * preco_custo
 
 class Compra:
     def __init__(self, fornecedor_id, fornecedor_nome_snap, tipo_compra, data_emissao=None):

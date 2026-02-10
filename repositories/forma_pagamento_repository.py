@@ -3,9 +3,8 @@ class FormaPagamentoRepository:
         self.db = db_manager
 
     def listar_ativas(self):
-        """Retorna todas as formas de pagamento para o menu de escolha do vendedor."""
-        query = "SELECT * FROM formas_pagamento WHERE ativo = 1 ORDER BY nome ASC"
-        return self.db.fetch_all(query)
+        # Ajuste o nome da coluna conforme o seu banco (ex: nome ou descricao)
+        return self.db.fetch_all("SELECT id, nome FROM formas_pagamento WHERE ativo = 1")
 
     def buscar_por_id(self, id_forma):
         """Busca uma forma específica para gravar o nome correto no cabeçalho do pedido."""

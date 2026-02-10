@@ -9,8 +9,24 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         documento TEXT UNIQUE NOT NULL,
         inscricao_estadual TEXT,
         inscricao_municipal TEXT,
-        email TEXT,
-        telefone TEXT,
+        email_comercial TEXT,
+        email_nfe TEXT,
+        regime_tributario TEXT, -- Ex: Simples Nacional, Lucro Real
+        indicador_ie TEXT DEFAULT 'NAO_CONTRIBUINTE',        
+        limite_credito REAL DEFAULT 0,
+        eh_cliente BOOLEAN DEFAULT 0,
+        eh_fornecedor BOOLEAN DEFAULT 0,
+        eh_transportadora BOOLEAN DEFAULT 0,
+        eh_seguradora BOOLEAN DEFAULT 0,
+        data_cadastramento DATETIME DEFAULT CURRENT_TIMESTAMP,
+        observacoes TEXT
+    );
+
+
+    CREATE TABLE IF NOT EXISTS entidade_enderecos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entidade_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL, -- 'PRINCIPAL', 'ENTREGA', 'COBRANCA'
         cep TEXT,
         endereco TEXT,
         numero TEXT,
@@ -18,13 +34,19 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         bairro TEXT,
         cidade TEXT,
         uf TEXT,
-        limite_credito REAL DEFAULT 0,
-        eh_cliente BOOLEAN DEFAULT 0,
-        eh_fornecedor BOOLEAN DEFAULT 0,
-        eh_transportadora BOOLEAN DEFAULT 0,
-        data_cadastramento DATETIME DEFAULT CURRENT_TIMESTAMP,
-        observacoes TEXT
+        cidade_ibge INTEGER,
+        FOREIGN KEY (entidade_id) REFERENCES entidades(id) ON DELETE CASCADE
     );
+
+     CREATE TABLE IF NOT EXISTS entidade_contatos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entidade_id INTEGER NOT NULL,
+    tipo TEXT, -- 'CELULAR', 'FIXO', 'WHATSAPP'
+    nome_contato TEXT, -- 'Setor de Compras', 'João Gerente'
+    numero TEXT NOT NULL,
+    FOREIGN KEY (entidade_id) REFERENCES entidades(id) ON DELETE CASCADE
+);
+
 
     CREATE TABLE IF NOT EXISTS socios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

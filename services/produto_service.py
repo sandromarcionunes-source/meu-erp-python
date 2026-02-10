@@ -1,6 +1,14 @@
 from datetime import datetime
-from constants.item_types import REGRAS_ITEM
 from models.produto import Produto
+
+REGRAS_ITEM = {
+    '00': {'desc': 'MERCADORIA PARA REVENDA', 'ncm': True, 'venda': True, 'estoque': True},
+    '01': {'desc': 'MATÉRIA-PRIMA', 'ncm': True, 'venda': False, 'estoque': True},
+    '04': {'desc': 'PRODUTO ACABADO', 'ncm': True, 'venda': True, 'estoque': True},
+    '07': {'desc': 'USO E CONSUMO', 'ncm': True, 'venda': False, 'estoque': True},
+    '08': {'desc': 'ATIVO IMOBILIZADO', 'ncm': True, 'venda': False, 'estoque': True},
+    '09': {'desc': 'SERVIÇO', 'ncm': False, 'venda': True, 'estoque': False},
+}
 
 
 class ProdutoService:
@@ -9,122 +17,123 @@ class ProdutoService:
 
     def menu(self):
         while True:
-            print("\n" + "=" * 40)
-            print("📦 GESTÃO DE PRODUTOS (SKU AUTOMÁTICO)")
-            print("=" * 40)
+            print("\n" + "=" * 60)
+            print("📦 GESTÃO INTEGRAL DE PRODUTOS")
+            print("=" * 60)
             print("1. Cadastrar Novo Item")
-            print("2. Listar Todos")
-            print("3. Revisar / Alterar por SKU")
+            print("2. Listar Resumo (Estoque)")
+            print("3. Consulta Detalhada (Pesos/Estoque/Fisica)")
+            print("4. Alterar / Revisar Cadastro")
             print("0. Voltar")
-            op = input("Escolha: ")
+            op = input("\nEscolha uma opção: ").strip()
             if op == "1":
                 self.cadastrar()
             elif op == "2":
                 self.listar()
             elif op == "3":
+                self.consultar_detalhado()
+            elif op == "4":
                 self.alterar()
             elif op == "0":
                 break
 
     def cadastrar(self):
-        print("\n[ NOVO CADASTRO ]")
-        for cod, info in REGRAS_ITEM.items():
-            print(f"  {cod} - {info['desc']}")
+        print("\n" + "─" * 20 + " NOVO CADASTRO " + "─" * 20)
+        for k, v in REGRAS_ITEM.items():
+            print(f"{k} - {v['desc']}")
 
-        tipo = input("\nCódigo do tipo: ").strip()
-        regra = REGRAS_ITEM.get(tipo)
-        if not regra:
-            print("❌ Erro: Tipo inválido!");
-            return
+        tipo = input("\nEscolha o Tipo [00]: ").strip() or "00"
+        regra = REGRAS_ITEM.get(tipo, REGRAS_ITEM['00'])
 
-        print("--- Dados do Item ---")
         nome = input("Nome/Descrição: ").strip()
-        unidade = input("Unidade (UN/KG/PC/HR): ").strip().upper()
+        unidade = input("Unidade [UN]: ").strip().upper() or "UN"
+        cat = input("Categoria: ").strip() or None
+        mar = input("Marca: ").strip() or None
+        mod = input("Modelo/Versão: ").strip() or None
 
         try:
             ncm = input("NCM: ").strip() if regra['ncm'] else ""
+            cest = input("CEST: ").strip()
+            ori = int(input("Origem (0-Nacional) [0]: ") or 0)
 
-            p_liq = 0.0
-            p_bru = 0.0
-            if tipo != "09":
-                p_liq = float(input("Peso Líquido (kg): ") or 0)
-                p_bru = float(input("Peso Bruto (kg): ") or 0)
+            # --- CAMPOS DE PESO ADICIONADOS ---
+            p_liq = float(input("Peso Líquido (KG) [0.0]: ").replace(',', '.') or 0)
+            p_bru = float(input("Peso Bruto (KG) [0.0]: ").replace(',', '.') or 0)
 
-            custo = float(input("Preço de Custo R$: ") or 0)
-            venda = float(input("Preço de Venda R$: ") or 0) if regra['venda'] else 0
-            est_ini = float(input("Estoque Inicial: ") or 0) if regra['estoque'] else 0
-            est_min = float(input("Estoque Mínimo: ") or 0)
+            custo = float(input("Custo R$: ").replace(',', '.') or 0)
+            venda = float(input("Venda R$: ").replace(',', '.') or 0) if regra['venda'] else 0
+            est_ini = float(input("Estoque Inicial: ").replace(',', '.') or 0) if regra['estoque'] else 0
+            est_min = float(input("Estoque Mínimo: ").replace(',', '.') or 0)
             obs = input("Observações: ").strip()
 
-            # Criamos o objeto (codigo_interno vai vazio e o repositório preenche)
-            novo_p = Produto(
-                codigo_interno=None, tipo_item=tipo, nome=nome, unidade=unidade,
-                ncm=ncm, peso_liquido=p_liq, peso_bruto=p_bru, preco_custo=custo,
-                preco_venda=venda, estoque_atual=est_ini, estoque_reservado=0.0,
-                estoque_minimo=est_min, observacoes=obs,
-                data_cadastramento=datetime.now().strftime("%d/%m/%Y %H:%M"),
-                ativo=1
+            p = Produto(
+                tipo_item=tipo, nome=nome, unidade=unidade, categoria=cat, marca=mar, modelo_versao=mod,
+                ncm=ncm, cest=cest, origem=ori, peso_liquido=p_liq, peso_bruto=p_bru,
+                preco_custo=custo, preco_venda=venda, estoque_atual=est_ini,
+                estoque_reservado=0.0, estoque_minimo=est_min,
+                observacoes=obs, ativo=1, data_cadastramento=datetime.now().strftime("%d/%m/%Y %H:%M")
             )
 
-            gerado_id = self.repo.salvar(novo_p)
-            print(f"\n✅ SUCESSO! Item cadastrado com SKU automático: {gerado_id}")
-
+            sku = self.repo.salvar(p)
+            print(f"\n✅ Sucesso! SKU: {sku} cadastrado com pesos e estoque.")
         except ValueError:
-            print("❌ Erro: Valor numérico inválido!")
+            print("\n❌ Erro: Verifique os valores numéricos.")
 
     def listar(self):
         itens = self.repo.buscar_todos()
-        if not itens:
-            print("\n⚠️ Nenhum item no sistema.");
-            return
-
-        print("\n" + "=" * 105)
-        print(f"{'SKU/ID':<10} | {'NOME/DESCRIÇÃO':<35} | {'TIPO':<15} | {'ESTOQUE':<10} | {'RESERVA':<10}")
-        print("-" * 105)
+        print("\n" + "═" * 105)
+        print(f"{'SKU':<6} | {'DESCRIÇÃO':<40} | {'VENDA':>10} | {'ATUAL':>10} | {'RESERV.':>10}")
+        print("─" * 105)
         for i in itens:
-            t_desc = REGRAS_ITEM.get(i.tipo_item, {}).get('desc', 'N/A')
-            print(f"{i.codigo_interno:<10} | {i.nome[:35]:<35} | {t_desc[:15]:<15} | {i.estoque_atual:<10.2f} | {i.estoque_reservado:<10.2f}")
-        print("=" * 105)
+            desc = f"{i.nome} {i.marca or ''}".strip()
+            print(
+                f"{i.codigo_interno:<6} | {desc[:40]:<40} | R${i.preco_venda:>8.2f} | {i.estoque_atual:>10.2f} | {i.estoque_reservado:>10.2f}")
+
+    def consultar_detalhado(self):
+        termo = input("\n🔎 SKU ou Nome: ").strip()
+        produtos = self.repo.buscar_por_id_ou_descricao(termo)
+        if not produtos: return print("⚠️ Não encontrado.")
+
+        for p in produtos:
+            disponivel = p.estoque_atual - p.estoque_reservado
+            print("\n" + "═" * 60)
+            print(f"📦 SKU: {p.codigo_interno} | {p.nome}")
+            print(f"🔹 Marca: {p.marca or 'N/A'} | Modelo: {p.modelo_versao or 'N/A'}")
+            print(f"🔹 NCM: {p.ncm} | CEST: {p.cest} | Origem: {p.origem}")
+            print(f"🔹 Unidade: {p.unidade} | Categoria: {p.categoria or 'N/A'}")
+            print("─" * 60)
+            # EXIBIÇÃO DOS PESOS
+            print(f"⚖️  PESO LÍQUIDO: {p.peso_liquido:>10.3f} KG")
+            print(f"⚖️  PESO BRUTO:   {p.peso_bruto:>10.3f} KG")
+            print("─" * 60)
+            print(f"📈 ESTOQUE ATUAL:    {p.estoque_atual:>10.2f}")
+            print(f"📉 ESTOQUE RESERVADO: {p.estoque_reservado:>10.2f}")
+            print(f"✅ DISPONÍVEL VENDA:  {disponivel:>10.2f}")
+            print(f"🔔 ESTOQUE MÍNIMO:    {p.estoque_minimo:>10.2f}")
+            if disponivel <= p.estoque_minimo: print("⚠️  ALERTA: ESTOQUE BAIXO!")
+            print("═" * 60)
+        input("\n[ENTER] para voltar...")
 
     def alterar(self):
-        print("\n🔍 REVISÃO DE CADASTRO")
-        sku = input("Digite o SKU (ID) para revisar: ").strip().upper()
+        sku = input("\n🔎 SKU para revisar: ").strip().upper()
         p = self.repo.buscar_por_codigo(sku)
+        if not p: return print("❌ SKU não encontrado!")
 
-        if not p:
-            print("❌ SKU não encontrado!");
-            return
-
-        regra = REGRAS_ITEM.get(p.tipo_item)
-        print(f"\nEditando Item {p.codigo_interno}: {p.nome}")
-        print("💡 [ENTER] mantém o atual | [DIGITE] para alterar\n")
-
+        print(f"\nEditando: {p.nome}")
         try:
             p.nome = input(f"Nome [{p.nome}]: ").strip() or p.nome
-            p.unidade = input(f"Unidade [{p.unidade}]: ").strip().upper() or p.unidade
+            p.categoria = input(f"Categoria [{p.categoria}]: ").strip() or p.categoria
 
-            if regra['ncm']:
-                p.ncm = input(f"NCM [{p.ncm}]: ").strip() or p.ncm
+            # EDIÇÃO DE PESOS NA ALTERAÇÃO
+            p.peso_liquido = float(input(f"Peso Líq [{p.peso_liquido}]: ").replace(',', '.') or p.peso_liquido)
+            p.peso_bruto = float(input(f"Peso Bruto [{p.peso_bruto}]: ").replace(',', '.') or p.peso_bruto)
 
-            if p.tipo_item != "09":
-                res_pl = input(f"Peso Líq [{p.peso_liquido}]: ").strip()
-                p.peso_liquido = float(res_pl) if res_pl else p.peso_liquido
-                res_pb = input(f"Peso Bruto [{p.peso_bruto}]: ").strip()
-                p.peso_bruto = float(res_pb) if res_pb else p.peso_bruto
-
-            res_custo = input(f"Custo R$ [{p.preco_custo}]: ").strip()
-            p.preco_custo = float(res_custo) if res_custo else p.preco_custo
-
-            if regra['venda']:
-                res_venda = input(f"Venda R$ [{p.preco_venda}]: ").strip()
-                p.preco_venda = float(res_venda) if res_venda else p.preco_venda
-
-            res_min = input(f"Est. Mínimo [{p.estoque_minimo}]: ").strip()
-            p.estoque_minimo = float(res_min) if res_min else p.estoque_minimo
-
-            p.observacoes = input(f"Obs [{p.observacoes}]: ").strip() or p.observacoes
+            p.preco_custo = float(input(f"Custo [{p.preco_custo}]: ").replace(',', '.') or p.preco_custo)
+            p.preco_venda = float(input(f"Venda [{p.preco_venda}]: ").replace(',', '.') or p.preco_venda)
+            p.estoque_atual = float(input(f"Estoque [{p.estoque_atual}]: ").replace(',', '.') or p.estoque_atual)
+            p.ativo = int(input(f"Ativo (1/0) [{p.ativo}]: ") or p.ativo)
 
             self.repo.atualizar(p)
-            print(f"\n✅ SKU {p.codigo_interno} atualizado com sucesso!")
+            print("\n✅ Cadastro atualizado com sucesso!")
         except ValueError:
-            print("❌ Erro: Valor numérico inválido.")
+            print("\n❌ Erro nos valores.")

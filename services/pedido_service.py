@@ -35,16 +35,25 @@ class PedidoService:
                 break
 
     def ler_dados(self, obj, chaves_possiveis):
-        """Função auxiliar para ler dados de Objetos ou Dicionários (SQLite Row)"""
+        if obj is None: return ""
+
+        # Se for um dicionário ou SQLite Row
+        if isinstance(obj, dict) or "Row" in str(type(obj)):
+            for chave in chaves_possiveis:
+                # Tenta a chave como está, em maiúsculo e em minúsculo
+                for c in [chave, chave.upper(), chave.lower()]:
+                    try:
+                        if obj[c] is not None: return obj[c]
+                    except:
+                        continue
+
+        # Se for um Objeto
         for chave in chaves_possiveis:
-            if isinstance(obj, dict) or str(type(obj)) == "<class 'sqlite3.Row'>":
-                try:
-                    if obj[chave] is not None: return obj[chave]
-                except:
-                    pass
-            val = getattr(obj, chave, None)
-            if val is not None: return val
-        return ""
+            for c in [chave, chave.upper(), chave.lower()]:
+                val = getattr(obj, c, None)
+                if val is not None: return val
+
+        return "???"  # Se chegar aqui, realmente não achou nada
 
     def novo_pedido(self):
         print("\n--- INICIANDO NOVO PEDIDO ---")
@@ -127,39 +136,75 @@ class PedidoService:
             print("⚠️ Pedido vazio. Operação cancelada.")
             return
 
-        # 4. FINALIZAÇÃO
+        # --- 4. FINALIZAÇÃO E PAGAMENTO ---
         print("\n" + "─" * 40)
+        print("⚙️  TIPO DE LANÇAMENTO:")
         print("1. SAÍDA IMEDIATA (Baixa Estoque)")
         print("2. RESERVA (Bloqueia p/ Veículos)")
-        baixar_agora = True if input("Escolha: ") == "1" else False
+        opcao_saida = input("Escolha [1]: ").strip() or "1"
+        baixar_agora = True if opcao_saida == "1" else False
 
-        print("\n--- FORMAS DE PAGAMENTO ---")
+        print("\n💳 FORMAS DE PAGAMENTO DISPONÍVEIS:")
         formas = self.pag_repo.listar_ativas()
-        for f in formas:
-            f_id = self.ler_dados(f, ['id', 'ID'])
-            f_nome = self.ler_dados(f, ['nome', 'NOME', 'descricao'])
-            print(f"   [{f_id}] {f_nome}")
+        if not formas:
+            print("⚠️ Nenhuma forma de pagamento cadastrada! Usando 'DINHEIRO' por padrão.")
+            pedido.forma_pagamento = "DINHEIRO"
+        else:
+            for f in formas:
+                f_id = self.ler_dados(f, ['id', 'ID'])
+                f_nome = self.ler_dados(f, ['nome', 'NOME', 'descricao'])
+                print(f"   [{f_id}] {f_nome}")
 
-        # Loop para evitar o "pulo" do input de pagamento
-        id_pgto = ""
-        while not id_pgto:
-            id_pgto = input("\n👉 Digite o ID da Forma de Pagamento: ").strip()
+            id_pgto = ""
+            while not id_pgto:
+                id_pgto = input("\n👉 Digite o ID da Forma de Pagamento: ").strip()
+                pgto_sel = self.pag_repo.buscar_por_id(id_pgto)
+                if pgto_sel:
+                    pedido.forma_pagamento = self.ler_dados(pgto_sel, ['nome', 'descricao'])
+                else:
+                    print("❌ ID Inválido. Escolha uma forma da lista.")
+                    id_pgto = ""
 
-        pgto_sel = self.pag_repo.buscar_por_id(id_pgto)
-        pedido.forma_pagamento = self.ler_dados(pgto_sel, ['nome', 'descricao']) if pgto_sel else "DINHEIRO"
+        # --- 5. LÓGICA DE PARCELAMENTO ---
+        if pedido.forma_pagamento.upper() != "DINHEIRO":
+            try:
+                print(f"\n📝 Configuração de Prazo ({pedido.forma_pagamento}):")
+                parc_in = input("   Quantidade de Parcelas [1]: ").strip()
+                pedido.total_parcelas = int(parc_in) if parc_in else 1
 
-        val_frete = input("\n🚚 Valor do Frete R$ [0]: ").strip().replace(',', '.')
+                if pedido.total_parcelas > 1:
+                    prazo_in = input("   Intervalo entre parcelas (dias) [30]: ").strip()
+                    pedido.intervalo_dias = int(prazo_in) if prazo_in else 30
+            except ValueError:
+                print("⚠️ Entrada inválida. Definindo como 1 parcela à vista.")
+                pedido.total_parcelas = 1
+        else:
+            pedido.total_parcelas = 1
+            pedido.intervalo_dias = 0
+
+        # --- 6. TOTAIS E CONFIRMAÇÃO ---
+        val_frete = input("\n🚚 Valor do Frete R$ [0,00]: ").strip().replace(',', '.')
         pedido.valor_frete = float(val_frete) if val_frete else 0.0
 
         pedido.calcular_totais()
-        print(f"\n💰 TOTAL: R$ {pedido.valor_total_pedido:.2f}")
 
-        if input("\n🚀 Confirmar Pedido? (S/N): ").upper() == 'S':
+        print("\n" + "═" * 40)
+        print(f"💰 RESUMO DO PEDIDO")
+        print(f"   Cliente: {pedido.cliente_nome_snap}")
+        print(f"   Pagamento: {pedido.forma_pagamento}")
+        if pedido.total_parcelas > 1:
+            v_parc = pedido.valor_total_pedido / pedido.total_parcelas
+            print(
+                f"   Parcelamento: {pedido.total_parcelas}x de R$ {v_parc:.2f} (a cada {pedido.intervalo_dias} dias)")
+        print(f"   TOTAL A PAGAR: R$ {pedido.valor_total_pedido:.2f}")
+        print("═" * 40)
+
+        if input("\n🚀 Confirmar e Gravar Pedido? (S/N): ").upper() == 'S':
             id_final = self.repo.salvar(pedido, baixar_imediato=baixar_agora)
             if id_final:
                 print(f"✅ PEDIDO #{id_final} FINALIZADO COM SUCESSO!")
             else:
-                print("❌ Erro ao salvar o pedido no banco de dados.")
+                print("❌ Erro ao salvar no banco de dados.")
 
     def listar_pedidos(self):
         pedidos = self.repo.listar_todos()
@@ -167,15 +212,48 @@ class PedidoService:
             print("\n📭 Nenhum pedido encontrado.")
             return
 
-        print(f"\n{'ID':<5} | {'DATA':<18} | {'CLIENTE':<25} | {'TOTAL':<10} | {'STATUS':<10}")
-        print("-" * 85)
+        print("\n" + "═" * 100)
+        print(f"{'📋 RELATÓRIO DETALHADO DE VENDAS':^100}")
+        print("═" * 100)
+
         for p in pedidos:
             pid = self.ler_dados(p, ['id', 'ID'])
             pdata = self.ler_dados(p, ['data_emissao'])
-            pcli = str(self.ler_dados(p, ['cliente_nome_snap', 'nome']))[:25]
+            pcli = str(self.ler_dados(p, ['cliente_nome_snap', 'nome'])).upper()
             ptotal = float(self.ler_dados(p, ['valor_total_pedido']) or 0)
             pstat = self.ler_dados(p, ['status'])
-            print(f"{pid:<5} | {pdata:<18} | {pcli:<25} | R${ptotal:>8.2f} | {pstat:<10}")
+            ppag = self.ler_dados(p, ['forma_pagamento']).upper()
+            pfrete = float(self.ler_dados(p, ['valor_frete']) or 0)
+
+            # --- CABEÇALHO DO PEDIDO ---
+            print(f"\n📦 PEDIDO: #{str(pid).zfill(4):<6} | DATA: {pdata:<16} | STATUS: {pstat}")
+            print(f"👤 CLIENTE: {pcli}")
+            print(f"💳 PGTO: {ppag:<18} | FRETE: R$ {pfrete:>8.2f} | TOTAL: R$ {ptotal:>9.2f}")
+
+            # --- BUSCA ITENS ---
+            itens = self.repo.buscar_itens_por_pedido(pid)
+            if itens:
+                print(f"   {'   ' + '─' * 82}")
+                # Cabeçalho da tabela de itens com DESCONTO
+                print(f"   {'   | PRODUTO':<38} | {'QTD':<6} | {'PREÇO':<10} | {'DESC.':<9} | {'SUBTOTAL'}")
+
+                for i in itens:
+                    nome = self.ler_dados(i, ['produto_nome_snap'])[:33]
+                    qtd = float(self.ler_dados(i, ['quantidade']))
+                    preco = float(self.ler_dados(i, ['preco_venda']))
+                    desc = float(self.ler_dados(i, ['desconto']) or 0)
+                    sub = float(self.ler_dados(i, ['subtotal']))
+
+                    # Linha do item com alinhamento preciso
+                    print(f"   {"   • " + nome:<38} | {qtd:<6.2f} | {preco:>10.2f} | {desc:>9.2f} | {sub:>10.2f}")
+
+                print(f"   {'   ' + '─' * 82}")
+            else:
+                print("   ⚠️ (Nenhum item encontrado)")
+
+            print("-" * 100)
+
+        input("\nPressione [ENTER] para voltar ao menu...")
 
     def excluir_pedido(self):
         print("\n" + "─" * 45)

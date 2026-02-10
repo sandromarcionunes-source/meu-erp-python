@@ -58,7 +58,7 @@ class EmissorService:
         print("\n⚖️ Dados Tributários:")
         ibge = input(f"Cód. IBGE Município [{atual.ibge_municipio if atual else ''}]: ").strip() or (
             atual.ibge_municipio if atual else "")
-        regime = input(f"Regime (1-Simples / 3-Normal) [{atual.regime_tributario if atual else ''}]: ").strip() or (
+        regime = input(f"Regime (1)MEI 2)SIMPLES 3)Lucro Presumido 4)Lucro Real) [{atual.regime_tributario if atual else ''}]: ").strip() or (
             atual.regime_tributario if atual else "")
 
         emissor = DadosEmissor(

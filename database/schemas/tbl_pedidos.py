@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS pedido_itens (
     produto_id INTEGER NOT NULL,
     produto_nome_snap TEXT, -- Nome do produto na hora da venda
     quantidade REAL NOT NULL,
-    preco_unitario REAL NOT NULL,
+    preco_venda REAL NOT NULL,
     desconto REAL DEFAULT 0, -- Padronizado com seu PedidoItem
     subtotal REAL NOT NULL,
     FOREIGN KEY (pedido_id) REFERENCES pedidos (id) ON DELETE CASCADE,

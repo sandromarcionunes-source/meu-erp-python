@@ -1,11 +1,11 @@
 class PedidoItem:
-    def __init__(self, produto_id, produto_nome_snap, quantidade, preco_unitario, desconto=0):
+    def __init__(self, produto_id, produto_nome_snap, quantidade, preco_venda, desconto=0):
         self.produto_id = produto_id
         self.produto_nome_snap = produto_nome_snap
         self.quantidade = quantidade
-        self.preco_unitario = preco_unitario
-        self.desconto = desconto if desconto <= preco_unitario else 0
-        self.subtotal = quantidade * (self.preco_unitario - self.desconto)
+        self.preco_venda = preco_venda
+        self.desconto = desconto if desconto <= preco_venda else 0
+        self.subtotal = quantidade * (self.preco_venda - self.desconto)
 
 class Pedido:
     def __init__(self, entidade_id, data_emissao, forma_pagamento="", id=None):
@@ -13,6 +13,8 @@ class Pedido:
         self.entidade_id = entidade_id
         self.data_emissao = data_emissao
         self.forma_pagamento = forma_pagamento
+        self.total_parcelas = 1
+        self.intervalo_dias = 30
         self.valor_frete = 0.0
         self.cliente_nome_snap = ""
         self.cliente_documento_snap = ""

@@ -5,17 +5,36 @@ class PedidoRepository:
     def salvar(self, pedido, baixar_imediato=True):
         try:
             # 1. SALVAR PEDIDO
-            sql_p = """INSERT INTO pedidos (entidade_id, data_emissao, valor_total_produtos, valor_frete, 
-                       valor_total_pedido, forma_pagamento, status, cliente_nome_snap, 
-                       cliente_documento_snap, cliente_endereco_snap, cliente_email_snap) 
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+            sql_p = """INSERT INTO pedidos (
+            entidade_id, 
+            data_emissao, 
+            valor_total_produtos, 
+            valor_frete, 
+            valor_total_pedido, 
+            forma_pagamento, 
+            status, 
+            cliente_nome_snap, 
+            cliente_documento_snap, 
+            cliente_endereco_snap, 
+            cliente_email_snap, 
+            total_parcelas, 
+            intervalo_dias) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
             params_p = (
-                int(pedido.entidade_id), pedido.data_emissao, pedido.valor_total_produtos,
-                pedido.valor_frete, pedido.valor_total_pedido, pedido.forma_pagamento,
+                int(pedido.entidade_id),
+                pedido.data_emissao,
+                pedido.valor_total_produtos,
+                pedido.valor_frete,
+                pedido.valor_total_pedido,
+                pedido.forma_pagamento,
                 "CONCLUIDO" if baixar_imediato else "RESERVADO",
-                pedido.cliente_nome_snap, pedido.cliente_documento_snap,
-                pedido.cliente_endereco_snap, pedido.cliente_email_snap
+                pedido.cliente_nome_snap,
+                pedido.cliente_documento_snap,
+                pedido.cliente_endereco_snap,
+                pedido.cliente_email_snap,
+                pedido.total_parcelas,
+                pedido.intervalo_dias,
             )
 
             pedido_id = self.db.execute(sql_p, params_p)
@@ -28,14 +47,25 @@ class PedidoRepository:
 
                 # Inserir item na tabela pedido_itens
                 sql_item = """
-                            INSERT INTO pedido_itens (
-                                pedido_id, produto_id, produto_nome_snap, 
-                                quantidade, preco_unitario, desconto, subtotal
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                            """
+                    INSERT INTO pedido_itens (
+                    pedido_id, 
+                    produto_id, 
+                    produto_nome_snap, 
+                    quantidade, 
+                    preco_venda, 
+                    desconto, 
+                    subtotal
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """
+
                 self.db.execute(sql_item, (
-                    pedido_id, prod_id, item.produto_nome_snap,
-                    item.quantidade, item.preco_unitario, item.desconto, item.subtotal
+                pedido_id,
+                prod_id,
+                item.produto_nome_snap,
+                item.quantidade,
+                item.preco_venda,
+                item.desconto,
+                item.subtotal
                 ))
 
                 # ATUALIZAÇÃO DE ESTOQUE - OPÇÃO B
@@ -46,11 +76,14 @@ class PedidoRepository:
                 else:
                     # RESERVA: Tira do 'Disponível' (Atual) e move para 'Reservado'
                     sql_est = """
-                                    UPDATE produtos 
-                                    SET estoque_atual = estoque_atual - ?, 
-                                        estoque_reservado = estoque_reservado + ? 
-                                    WHERE id = ?
-                                """
+                        UPDATE 
+                        produtos 
+                        SET 
+                        estoque_atual = estoque_atual - ?, 
+                        estoque_reservado = estoque_reservado + ? 
+                        WHERE id = ?
+                        """
+
                     self.db.execute(sql_est, (item.quantidade, item.quantidade, prod_id))
 
             return pedido_id
@@ -139,3 +172,18 @@ class PedidoRepository:
         except Exception as e:
             print(f"❌ Erro ao estornar estoque e deletar: {e}")
             return False
+
+    def buscar_itens_por_pedido(self, pedido_id):
+        """Busca todos os itens vinculados a um pedido específico"""
+        query = """
+            SELECT 
+                produto_id, 
+                produto_nome_snap, 
+                quantidade, 
+                preco_venda, 
+                desconto, 
+                subtotal 
+            FROM pedido_itens 
+            WHERE pedido_id = ?
+        """
+        return self.db.fetch_all(query, (pedido_id,))
