@@ -15,6 +15,29 @@ class ProdutoService:
     def __init__(self, repository):
         self.repo = repository
 
+    def selecionar_opcao(self, titulo: str, opcoes: dict) -> str:
+        while True:
+            print(f"\n--- {titulo} ---")
+            for k, v in opcoes.items():
+                print(f"{k}. {v}")
+            esc = input("Selecione uma opção: ").strip()
+            if esc in opcoes:
+                return opcoes[esc]
+            print("⚠️ Opção inválida!")
+
+    def selecionar_opcao_chave(self, titulo: str, opcoes: dict) -> str:
+        while True:
+            print(f"\n--- {titulo} ---")
+            for k, v in opcoes.items():
+                print(f"{k}. {v}")
+            esc = input("Selecione uma opção: ").strip()
+            if esc in opcoes:
+                return esc
+            print("⚠️ Opção inválida!")
+
+
+
+
     def menu(self):
         while True:
             print("\n" + "=" * 60)
@@ -115,25 +138,94 @@ class ProdutoService:
         input("\n[ENTER] para voltar...")
 
     def alterar(self):
-        sku = input("\n🔎 SKU para revisar: ").strip().upper()
+        print("\n" + "═" * 55 + f"\n{'📝 ALTERAÇÃO COM MARCAÇÃO VISUAL':^55}\n" + "═" * 55)
+        sku = input("🔎 SKU para revisar (Ex: 0001): ").strip().upper()
         p = self.repo.buscar_por_codigo(sku)
-        if not p: return print("❌ SKU não encontrado!")
 
-        print(f"\nEditando: {p.nome}")
+        if not p:
+            return print("❌ SKU não encontrado no sistema!")
+
+        # 1. Backup para comparação
+        original = {
+            "Nome": p.nome,
+            "Categoria": p.categoria,
+            "Marca": p.marca,
+            "Modelo": p.modelo_versao,  # 🛠️ Ajustado
+            "NCM": p.ncm,
+            "CEST": p.cest,
+            "Origem": str(p.origem),
+            "Peso Líq": p.peso_liquido,
+            "Peso Bruto": p.peso_bruto,
+            "Custo": p.preco_custo,
+            "Venda": p.preco_venda,
+            "Estoque": p.estoque_atual,
+            "Ativo": p.ativo
+        }
+
+        print(f"\n📦 Editando SKU: {p.codigo_interno} - {p.nome}")
         try:
-            p.nome = input(f"Nome [{p.nome}]: ").strip() or p.nome
-            p.categoria = input(f"Categoria [{p.categoria}]: ").strip() or p.categoria
+            p.nome = input(f"🏷️ Nome [{p.nome}]: ").strip().upper() or p.nome
+            p.categoria = input(f"📂 Categoria [{p.categoria}]: ").strip().upper() or p.categoria
+            p.marca = input(f"🔖 Marca [{p.marca}]: ").strip().upper() or p.marca
+            p.modelo_versao = input(f"🚘 Modelo [{p.modelo_versao}]: ").strip().upper() or p.modelo_versao
 
-            # EDIÇÃO DE PESOS NA ALTERAÇÃO
-            p.peso_liquido = float(input(f"Peso Líq [{p.peso_liquido}]: ").replace(',', '.') or p.peso_liquido)
-            p.peso_bruto = float(input(f"Peso Bruto [{p.peso_bruto}]: ").replace(',', '.') or p.peso_bruto)
+            p.ncm = input(f"📜 NCM [{p.ncm}]: ").strip() or p.ncm
+            p.cest = input(f"📑 CEST [{p.cest}]: ").strip() or p.cest
 
-            p.preco_custo = float(input(f"Custo [{p.preco_custo}]: ").replace(',', '.') or p.preco_custo)
-            p.preco_venda = float(input(f"Venda [{p.preco_venda}]: ").replace(',', '.') or p.preco_venda)
-            p.estoque_atual = float(input(f"Estoque [{p.estoque_atual}]: ").replace(',', '.') or p.estoque_atual)
-            p.ativo = int(input(f"Ativo (1/0) [{p.ativo}]: ") or p.ativo)
+            opcoes_origem = {"0": "Nacional", "1": "Imp. Dir.", "2": "Adq. Int.", "3": "Nac >40%", "4": "Proc. Básico",
+                             "5": "Nac <=40%", "6": "Imp. Dir s/ sim.", "7": "Adq. Int s/ sim.", "8": "Nac >70%"}
+            print(f"🌍 Origem atual: {p.origem}")
+            nova_ori = self.selecionar_opcao_chave("ALTERAR ORIGEM", opcoes_origem)
+            p.origem = int(nova_ori) if nova_ori else p.origem
 
-            self.repo.atualizar(p)
-            print("\n✅ Cadastro atualizado com sucesso!")
+            p.peso_liquido = float(str(input(f"⚖️ Peso Líq [{p.peso_liquido}]: ")).replace(',', '.') or p.peso_liquido)
+            p.peso_bruto = float(str(input(f"🏋️ Peso Bruto [{p.peso_bruto}]: ")).replace(',', '.') or p.peso_bruto)
+            p.preco_custo = float(str(input(f"💵 Custo [{p.preco_custo}]: ")).replace(',', '.') or p.preco_custo)
+            p.preco_venda = float(str(input(f"💰 Venda [{p.preco_venda}]: ")).replace(',', '.') or p.preco_venda)
+            p.estoque_atual = float(str(input(f"📦 Estoque [{p.estoque_atual}]: ")).replace(',', '.') or p.estoque_atual)
+            p.ativo = int(input(f"✅ Ativo (1/0) [{p.ativo}]: ") or p.ativo)
+
+            # 2. Mapa de novos valores
+            atualizado = {
+                "Nome": p.nome,
+                "Categoria": p.categoria,
+                "Marca": p.marca,
+                "Modelo": p.modelo_versao,
+                "NCM": p.ncm,
+                "CEST": p.cest,
+                "Origem": p.origem,
+                "Peso Líq": p.peso_liquido,
+                "Peso Bruto": p.peso_bruto,
+                "Custo": p.preco_custo,
+                "Venda": p.preco_venda,
+                "Estoque": p.estoque_atual,
+                "Ativo": p.ativo
+            }
+
+            # 3. Exibição da Marcação Visual de Alterações
+            print("\n" + "─" * 55)
+            print(f"{'🔍 RESUMO DAS ALTERAÇÕES':^55}")
+            print("─" * 55)
+            print(f"{'CAMPO':<15} | {'DE (ANTERIOR)':<17} | {'PARA (NOVO)':<17}")
+            print("─" * 55)
+
+            alterou = False
+            for campo in original:
+                if str(original[campo]) != str(atualizado[campo]):
+                    print(f"⚠️ {campo:<13} | {str(original[campo]):<17} | {str(atualizado[campo]):<17} 🔄")
+                    alterou = True
+
+            if not alterou:
+                print(f"{'Nenhuma alteração realizada.':^55}")
+                print("─" * 55)
+                return
+
+            confirmar = input("\n💾 Confirma as alterações acima? (S/N): ").upper().strip()
+            if confirmar == 'S':
+                self.repo.atualizar(p)
+                print("\n✅ CADASTRO ATUALIZADO COM SUCESSO!")
+            else:
+                print("\n❌ OPERAÇÃO CANCELADA PELO CEO.")
+
         except ValueError:
-            print("\n❌ Erro nos valores.")
+            print("\n❌ ERRO: Verifique os valores numéricos. Alteração cancelada.")

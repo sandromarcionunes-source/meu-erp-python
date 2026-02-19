@@ -10,8 +10,9 @@ from .tbl_compras import CREATE_TABLE_COMPRAS_COMPLETO as compras_sql
 from .formas_pagamento_compras import CREATE_TABLE_FORMAS_PAGAMENTO_COMPRAS as formas_pagto_compras
 from .tbl_dados_emissor import CREATE_TABLE_DADOS_EMISSOR as dados_emissor_sql
 from .tbl_seguro import CREATE_TABLE_SEGUROS as seguro_sql
-
+from .analise_schema import CREATE_TABLE_ANALISE_CREDITO as analisador_sql
 # Lista com todas as tabelas para criação em lote
+
 ALL_TABLES = [
     cliente_sql,
     produto_sql,
@@ -25,4 +26,5 @@ ALL_TABLES = [
     formas_pagto_compras,
     dados_emissor_sql,
     seguro_sql,
+    analisador_sql,
 ]

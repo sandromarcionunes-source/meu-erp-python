@@ -11,9 +11,11 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         inscricao_municipal TEXT,
         email_comercial TEXT,
         email_nfe TEXT,
-        regime_tributario TEXT, -- Ex: Simples Nacional, Lucro Real
-        indicador_ie TEXT DEFAULT 'NAO_CONTRIBUINTE',        
+        regime_tributario TEXT,
+        indicador_ie TEXT DEFAULT '9',        
         limite_credito REAL DEFAULT 0,
+        limite_validade TEXT,
+        bloqueado INTEGER DEFAULT 0, -- 🛠️ CRUCIAL PARA O MOTOR DE CRÉDITO
         eh_cliente BOOLEAN DEFAULT 0,
         eh_fornecedor BOOLEAN DEFAULT 0,
         eh_transportadora BOOLEAN DEFAULT 0,
@@ -22,11 +24,10 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         observacoes TEXT
     );
 
-
     CREATE TABLE IF NOT EXISTS entidade_enderecos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         entidade_id INTEGER NOT NULL,
-        tipo TEXT NOT NULL, -- 'PRINCIPAL', 'ENTREGA', 'COBRANCA'
+        tipo TEXT NOT NULL,
         cep TEXT,
         endereco TEXT,
         numero TEXT,
@@ -38,15 +39,14 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         FOREIGN KEY (entidade_id) REFERENCES entidades(id) ON DELETE CASCADE
     );
 
-     CREATE TABLE IF NOT EXISTS entidade_contatos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entidade_id INTEGER NOT NULL,
-    tipo TEXT, -- 'CELULAR', 'FIXO', 'WHATSAPP'
-    nome_contato TEXT, -- 'Setor de Compras', 'João Gerente'
-    numero TEXT NOT NULL,
-    FOREIGN KEY (entidade_id) REFERENCES entidades(id) ON DELETE CASCADE
-);
-
+    CREATE TABLE IF NOT EXISTS entidade_contatos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entidade_id INTEGER NOT NULL,
+        tipo TEXT, 
+        nome_contato TEXT,
+        numero TEXT NOT NULL,
+        FOREIGN KEY (entidade_id) REFERENCES entidades(id) ON DELETE CASCADE
+    );
 
     CREATE TABLE IF NOT EXISTS socios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +56,7 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
     data_entrada DATETIME NOT NULL,
     data_saida DATETIME,
     cargo TEXT DEFAULT 'Sócio',
-    nome_snapshot TEXT -- 👈 ADICIONE ESTA LINHA AQUI
-    );
+    nome_snapshot TEXT,
+    FOREIGN KEY (entidade_pai_id) REFERENCES entidades(id) ON DELETE CASCADE
+);
 """

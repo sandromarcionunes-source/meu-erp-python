@@ -3,461 +3,635 @@ from models.socio import Socio
 from models.entidade_enderecos import Endereco
 from models.entidade_contatos import Contato
 from datetime import datetime
-import re
-
+from typing import List
 
 class EntidadeService:
-    def __init__(self, entidade_repo):
-        self.repo = entidade_repo
+    def __init__(self, repo):
+        self.repo = repo
 
-    def validar_data(self, data_str):
-        """Valida se a data está no formato SQL AAAA-MM-DD"""
-        if not data_str: return None
-        return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", data_str))
-
-    def exibir_menu(self) -> None:
-        """Menu Completo de Gestão de Entidades"""
+    def selecionar_opcao(self, titulo: str, opcoes: dict) -> str:
+        """Retorna o VALOR da opção (ex: 'SIMPLES')"""
         while True:
-            print("\n" + "═" * 45)
-            print(f"{'👥 SISTEMA DE GESTÃO DE ENTIDADES':^45}")
-            print("═" * 45)
-            print("1. 📝 Cadastrar Nova Entidade (PF/PJ)")
-            print("2. 📋 Listar Todos os Clientes")
-            print("3. 🔍 Consultar um Cliente (Detalhado)")
-            print("4. 🚪 Registrar Saída de Sócio")
-            print("5. 🛠️  Alterar 1 Campo Específico")
-            print("6. 🔎 Revisão Geral (Campo a Campo)")
-            print("0. ⬅️  Voltar ao Menu Principal")
+            print(f"\n--- {titulo} ---")
+            for k, v in opcoes.items():
+                print(f"{k}. {v}")
+            esc = input("Selecione uma opção: ").strip()
+            if esc in opcoes:
+                return opcoes[esc]
+            print("⚠️ Opção inválida! Tente novamente.")
 
-            opcao = input("\nEscolha uma opção: ")
+    def selecionar_opcao_chave(self, titulo: str, opcoes: dict) -> str:
+        """Retorna a CHAVE da opção (ex: '1', '2' ou '9')"""
+        while True:
+            print(f"\n--- {titulo} ---")
+            for k, v in opcoes.items():
+                print(f"{k}. {v}")
+            esc = input("Selecione uma opção: ").strip()
+            if esc in opcoes:
+                return esc  # Retorna a chave (o número digitado)
+            print("⚠️ Opção inválida! Tente novamente.")
 
-            if opcao == "1":
+
+
+    def exibir_menu(self):
+        while True:
+            print("\n" + "═" * 45 + f"\n{'👥 GESTÃO DE ENTIDADES':^45}\n" + "═" * 45)
+            print("1. 📝 Cadastrar Nova Entidade")
+            print("2. 📋 Listar Clientes (Resumo)")
+            print("3. 🔍 Consulta Detalhada (Ficha)")
+            print("4. 🔎 Revisão Geral (Mestre/Ends/Conts)")
+            print("5. 🤝 GESTÃO DE SÓCIOS (I/A/E)")
+            print("6. 🤝 Alterar todos os dados de Entidades(Somente para Administrador)")
+            print("0. ⬅️  Voltar")
+            op = input("\nEscolha: ")
+            if op == "1":
                 self.cadastrar_entidade()
-            elif opcao == "2":
-                self.exibir_clientes_com_socios()
-                # self.listar_todas()
-            elif opcao == "3":
+            elif op == "2":
+                self.listar_clientes_resumido()
+            elif op == "3":
                 self.consultar_detalhes()
-            elif opcao == "4":
-                self.registrar_saida_socio()
-            elif opcao == "5":
-                self.alterar_campo_unico()
-            elif opcao == "6":
-                self.revisao_geral()
-            elif opcao == "0":
+            elif op == "4":
+                self.revisao_geral_completa()
+            elif op == "5":
+                self.gestao_socios()
+            elif op == "6":
+                self.editar_entidade_completa()
+            elif op == "0":
                 break
+
+    def gestao_socios(self):
+        """Módulo para Incluir, Alterar e Excluir Sócios (Opção 5) - VERSÃO INTEGRAL"""
+        termo = input("\n🔎 Digite o ID ou CPF/CNPJ da Empresa (PJ): ")
+        ent = self.repo.buscar_por_id_ou_documento(termo)
+
+        if not ent:
+            return print("❌ Empresa não encontrada.")
+        if ent.tipo_pessoa != 'PJ':
+            return print("❌ Apenas entidades PJ possuem quadro societário.")
+
+        print("\n" + "─" * 70 + f"\n{'QUADRO SOCIETÁRIO: ' + ent.nome_fantasia:^70}\n" + "─" * 70)
+
+        if not ent.socios:
+            print(f"{'⚠️ Nenhum sócio vinculado.':^70}")
+        else:
+            print(f"{'Nº':<3} | {'SÓCIO':<25} | {'PART.':>6} | {'CARGO':<15} | {'ENTRADA'}")
+            print("-" * 70)
+            for i, s in enumerate(ent.socios):
+                dt_ex = s.data_entrada if hasattr(s, 'data_entrada') and s.data_entrada else "N/A"
+                print(f"{i + 1:<3} | {s.nome_snapshot[:25]:<25} | {s.participacao:>5}% | {s.cargo:<15} | {dt_ex}")
+
+        print("\n" + "─" * 70)
+        print("[A] Incluir Novo  [E] Editar Existente  [R] Remover  [S] Sair")
+        acao = input("Ação: ").upper().strip()
+
+        # --- [A] INCLUIR NOVO SÓCIO ---
+        if acao == 'A':
+            doc_s = input("CPF/CNPJ do Novo Sócio: ").strip()
+            s_db = self.repo.buscar_por_cpf(doc_s)
+
+            if not s_db:
+                print("Sócio não cadastrado. Criando cadastro básico...")
+                nome_s = input("Nome do Sócio: ").strip().upper()
+                s_id = self.repo.salvar(Entidade(
+                    tipo_pessoa='PF',
+                    nome_fantasia=nome_s,
+                    documento=doc_s,
+                    data_cadastramento=datetime.now().strftime("%Y-%m-%d %H:%M")
+                ))
             else:
-                print("⚠️ Opção inválida!")
+                s_id = s_db.id
+
+            try:
+                part = float(input("Porcentagem (%): ").replace(',', '.'))
+                cargo = input("Cargo: ").strip().upper() or "SÓCIO"
+
+                # Data de Entrada conforme Livro de Regras
+                data_hoje = datetime.now().strftime("%d/%m/%Y")
+                data_entrada = input(f"Data de Entrada [{data_hoje}]: ").strip() or data_hoje
+
+                self.repo.db.execute("""
+                    INSERT INTO socios (entidade_pai_id, socio_entidade_id, percentual_participacao, data_entrada, cargo)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (ent.id, s_id, part, data_entrada, cargo))
+
+                print(f"✅ Sócio vinculado com sucesso em {data_entrada}!")
+            except ValueError:
+                print("❌ Erro: Porcentagem inválida.")
+
+        # --- [E] EDITAR SÓCIO EXISTENTE ---
+        elif acao == 'E' and ent.socios:
+            try:
+                idx = int(input("Número do sócio para editar: ")) - 1
+                if 0 <= idx < len(ent.socios):
+                    s_alvo = ent.socios[idx]
+                    print(f"\nEditando: {s_alvo.nome_snapshot}")
+
+                    n_part = input(f"Nova % [{s_alvo.participacao}]: ").strip()
+                    n_cargo = input(f"Novo Cargo [{s_alvo.cargo}]: ").strip()
+                    n_data = input(f"Nova Data [{s_alvo.data_entrada}]: ").strip()
+
+                    if n_part:
+                        self.repo.atualizar_campo_dinamico("socios", "percentual_participacao",
+                                                           float(n_part.replace(',', '.')), s_alvo.id)
+                    if n_cargo:
+                        self.repo.atualizar_campo_dinamico("socios", "cargo", n_cargo.upper(), s_alvo.id)
+                    if n_data:
+                        self.repo.atualizar_campo_dinamico("socios", "data_entrada", n_data, s_alvo.id)
+
+                    print("✅ Sócio atualizado!")
+                else:
+                    print("❌ Número inválido.")
+            except ValueError:
+                print("❌ Digite um número válido.")
+
+        # --- [R] REMOVER SÓCIO (O QUE ESTAVA FALTANDO) ---
+        elif acao == 'R' and ent.socios:
+            try:
+                idx = int(input("Número do sócio para REMOVER: ")) - 1
+                if 0 <= idx < len(ent.socios):
+                    s_alvo = ent.socios[idx]
+                    confirma = input(f"⚠️ Tem certeza que deseja remover {s_alvo.nome_snapshot}? (S/N): ").upper()
+                    if confirma == 'S':
+                        # Deleta o vínculo da tabela de sócios
+                        self.repo.db.execute("DELETE FROM socios WHERE id = ?", (s_alvo.id,))
+                        print(f"🗑️ Sócio {s_alvo.nome_snapshot} removido do quadro.")
+                else:
+                    print("❌ Número inválido.")
+            except ValueError:
+                print("❌ Digite um número válido.")
+
+        elif acao == 'S':
+            return
+
+    def consultar_detalhes(self):
+        """OPÇÃO 3: Exibição completa e organizada de todos os dados."""
+        # Aplicando sua mudança de 'Documento' para 'CPF/CNPJ'
+        termo = input("\n🔎 Digite o ID ou CPF/CNPJ para consulta: ")
+        ent = self.repo.buscar_por_id_ou_documento(termo)
+        if not ent:
+            return print("❌ Registro não localizado.")
+
+        print("\n" + "═" * 80)
+        print(f"{'FICHA CADASTRAL DETALHADA':^80}")
+        print("═" * 80)
+
+        # Bloco 1: Identificação Principal
+        print(f"👤 NOME FANTASIA: {ent.nome_fantasia}")
+        print(f"🏢 RAZÃO SOCIAL:  {ent.razao_social}")
+        print(f"📄 CPF/CNPJ:      {ent.documento} ({ent.tipo_pessoa})")
+        print(f"📅 CADASTRO EM:   {ent.data_cadastramento}")
+        print("-" * 80)
+
+        # Bloco 2: Dados Fiscais e Tributários
+        print(
+            f"📊 REGIME: {ent.regime_tributario or 'N/A':<15} | IE: {ent.inscricao_estadual or 'ISENTO':<15} | IM: {ent.inscricao_municipal or 'N/A'}")
+        print(f"✉️  EMAIL COM.: {ent.email_comercial or 'N/A':<30} | EMAIL NFE: {ent.email_nfe or 'N/A'}")
+        print(f"💰 LIMITE CRÉDITO: R$ {ent.limite_credito:,.2f} | 📅 VALIDADE: {ent.limite_validade}")
+        print(f"📝 OBSERVAÇÕES: {ent.observacoes or 'Nenhum registro.'}")
+        print("-" * 80)
+
+        # Bloco 3: Quadro Societário (Se for PJ ou tiver vínculos)
+        if ent.socios:
+            titulo = "SÓCIOS / PROPRIETÁRIOS" if ent.tipo_pessoa == 'PJ' else "PARTICIPAÇÕES EM EMPRESAS"
+            print(f"🔗 {titulo}:")
+            for s in ent.socios:
+                print(f"   • {s.nome_snapshot:<35} | Participação: {s.participacao:>5.1f}% | Cargo: {s.cargo}")
+            print("-" * 80)
+
+        # Bloco 4: Endereços (Recuperando a visualização completa com Complemento)
+        if ent.enderecos:
+            print("🏠 ENDEREÇOS:")
+            for e in ent.enderecos:
+                comp = f" ({e.complemento})" if e.complemento else ""
+                print(f"   • [{e.tipo}] {e.endereco}, {e.numero}{comp} - {e.bairro} - {e.cidade}/{e.uf} - CEP: {e.cep}")
+        else:
+            print("🏠 ENDEREÇOS: Nenhum endereço cadastrado.")
+        print("-" * 80)
+
+        # Bloco 5: Contatos
+        if ent.contatos:
+            print("📞 CONTATOS:")
+            for c in ent.contatos:
+                print(f"   • {c.tipo:<10}: {c.numero:<15} | Ref: {c.nome_contato or 'Geral'}")
+        else:
+            print("📞 CONTATOS: Nenhum contato cadastrado.")
+
+        print("═" * 80)
+        input("\n[Pressione Enter para voltar ao menu]")
+
+    def listar_clientes_resumido(self):
+        """OPÇÃO 2: Listagem organizada com larguras fixas e correção de formato."""
+        try:
+            clientes = self.repo.buscar_clientes()
+            if not clientes:
+                print("\n⚠️ Nenhum cliente cadastrado no sistema.")
+                input("\n[Pressione Enter para voltar]")
+                return
+
+            # Definição de Larguras (Total ajustado para 100 caracteres)
+            L_ID = 5
+            L_CLI = 30
+            L_DOC = 18
+            L_SOC = 30
+            L_PER = 8
+
+            print("\n" + "═" * 105)
+            print(f"{'RELATÓRIO DE VÍNCULOS E QUADRO SOCIETÁRIO':^105}")
+            print("═" * 105)
+
+            # Cabeçalho
+            header = (
+                f"{'ID':<{L_ID}} | "
+                f"{'CLIENTE / EMPRESA':<{L_CLI}} | "
+                f"{'DOCUMENTO':<{L_DOC}} | "
+                f"{'SÓCIO/VÍNCULO':<{L_SOC}} | "
+                f"{'%':>{L_PER}}"
+            )
+            print(header)
+            print("─" * 105)
+
+            for c in clientes:
+                # CORREÇÃO AQUI: Formatamos o ID separado da largura
+                id_formatado = f"{c.id:03d}"
+                doc_formatado = str(c.documento) if c.documento else "N/A"
+
+                if not c.socios:
+                    print(
+                        f"{id_formatado:<{L_ID}} | "
+                        f"{c.nome_fantasia[:L_CLI]:<{L_CLI}} | "
+                        f"{doc_formatado[:L_DOC]:<{L_DOC}} | "
+                        f"{'--':<{L_SOC}} | "
+                        f"{'--':>{L_PER}}"
+                    )
+                else:
+                    for i, s in enumerate(c.socios):
+                        nome_socio = s.nome_snapshot if s.nome_snapshot else "N/A"
+                        # Tratando a porcentagem para evitar erro se for None
+                        perc_valor = s.participacao if s.participacao is not None else 0.0
+                        perc_socio = f"{perc_valor:.1f}%"
+
+                        if i == 0:
+                            print(
+                                f"{id_formatado:<{L_ID}} | "
+                                f"{c.nome_fantasia[:L_CLI]:<{L_CLI}} | "
+                                f"{doc_formatado[:L_DOC]:<{L_DOC}} | "
+                                f"{nome_socio[:L_SOC]:<{L_SOC}} | "
+                                f"{perc_socio:>{L_PER}}"
+                            )
+                        else:
+                            print(
+                                f"{' ':<{L_ID}} | "
+                                f"{' ':<{L_CLI}} | "
+                                f"{' ':<{L_DOC}} | "
+                                f"{nome_socio[:L_SOC]:<{L_SOC}} | "
+                                f"{perc_socio:>{L_PER}}"
+                            )
+                print("-" * 105)
+
+            print(f"\n💡 DICA: Use a Opção 3 para ficha detalhada ou '..' para sair.")
+            res = input("\n[Enter para voltar]: ").strip()
+            if res == "..":
+                # Em vez de sys.exit, vamos apenas retornar para o menu
+                return
+
+        except Exception as e:
+            print(f"\n❌ Erro ao gerar relatório: {e}")
+            input("Pressione Enter para continuar...")
 
     def cadastrar_entidade(self):
+        print("\n" + "─" * 55 + f"\n{'🆕 NOVO CADASTRO':^55}\n" + "─" * 55)
 
-        """Cadastro completo com fluxo obrigatório de sócios para PJ"""
+        # 1. Validação de Tipo (PF/PJ)
+        while True:
+            tipo_input = input("Tipo (1-PF / 2-PJ): ").strip()
+            if tipo_input == '1':
+                tipo = 'PF'
+                break
+            elif tipo_input == '2':
+                tipo = 'PJ'
+                break
+            else:
+                print('⚠️ Opção inválida!')
 
-        print("\n" + "─" * 55)
-        print(f"{'🆕 NOVO CADASTRO DE CLIENTE':^55}")
-        print("─" * 55)
+        doc = input("Informe o CPF/CNPJ: ").strip()
+        if self.repo.buscar_por_cpf(doc):
+            return print(f"❌ CPF/CNPJ já cadastrado!")
 
-        tipo = input("Tipo (PF/PJ): ").upper().strip()
+        nome = input("Nome Fantasia: ").strip()
+        razao = input("Razão Social: ").strip()
 
-        if tipo not in ['PF', 'PJ']:
-            print("❌ Erro: Tipo inválido.")
-            return
+        # 2. Dados Fiscais (Mapeando códigos numéricos conforme o Schema)
+        ie = input("Inscrição Estadual (ISENTO se não houver): ").strip()
+        im = input("Inscrição Municipal: ").strip()
 
-        documento = input("CPF/CNPJ (Somente números): ").strip()
+        # IMPORTANTE: Pegamos a CHAVE (1, 2 ou 9) para salvar no banco
+        ind_ie = self.selecionar_opcao_chave("INDICADOR DE IE", {
+            "1": "CONTRIBUINTE",
+            "2": "CONTRIBUINTE ISENTO",
+            "9": "NAO_CONTRIBUINTE"
+        })
 
-        if self.repo.buscar_por_cpf(documento):
-            print(f"⚠️ Erro: Documento {documento} já cadastrado!")
-            return
+        regime = self.selecionar_opcao("REGIME", {
+            "1": "MEI",
+            "2": "SIMPLES",
+            "3": "PRESUMIDO",
+            "4": "REAL"
+        })
 
-        nome_fantasia = input("Nome Fantasia / Nome Completo: ").strip()
-        razao_social = input("Razão Social (Enter se igual): ").strip() or nome_fantasia
-        inscricao_estadual = input("Inscrição estadual: ").strip()
-        inscricao_municipal = input("Inscrição municipal(Se não tiver, não preencher): ").strip()
-        email_comercial = input("E-mail_comercial: ").strip()
-        email_nfe = input("E-mail_nfe: ").strip()
-        regime_tributario= input("Informe o regime tributário=> A)MEI B)SIMPLES C)Lucro Presumido D)Lucro Real :")
-        indicador_ie = input("O cliente é contribuinte ICMS (Escolha o código) 1)Sim 2)Isento 9)Não conbribuinte: ")
-        limite_credito = 0
+        # 3. Comunicação e Financeiro
+        email_c = input("E-mail Comercial: ").strip()
+        email_n = input("E-mail p/ NFe: ").strip()
+        limite = input("Limite de Crédito: ").replace(',', '.') or "0"
 
-        enderecos_coletados = self.fluxo_coleta_endereco()
-        contatos_coletados = self.fluxo_coleta_contato()
+        hoje_br = datetime.now().strftime("%d/%m/%Y")
+        print(f"📅 Validade do Limite [Padrão: {hoje_br}]")
+        val_input = input("Informe a data (DD/MM/AAAA) ou [ENTER]: ").strip()
+        validade_final = self.converter_data_br_para_iso(val_input if val_input else hoje_br)
 
+        obs = input("Observações: ").strip()
 
+        # 4. Bandeiras de Perfil
+        print("\n--- Perfil da Entidade ---")
+        e_for = input("É Fornecedor? (S/N): ").upper() == 'S'
+        e_tra = input("É Transportadora? (S/N): ").upper() == 'S'
+        e_seg = input("É Seguradora? (S/N): ").upper() == 'S'
 
-        print("\n🎭 Papéis (S para Sim / Enter para Não):")
-        eh_cli = input("  É Cliente? ").strip().upper() == 'S'
-        eh_for = input("  É Fornecedor? ").strip().upper() == 'S'
-        eh_tra = input("  É Transportadora? ").strip().upper() == 'S'
-        eh_seg = input("  É Seguradora? ").strip().upper() == 'S'
-        obs = input("\n📝 Observações: ").strip()
-
-        entidade = Entidade(
+        # 5. Criação do Objeto (Bate 100% com o seu __init__)
+        ent = Entidade(
             tipo_pessoa=tipo,
-            nome_fantasia=nome_fantasia,
-            razao_social=razao_social,
-            documento=documento,
-            inscricao_estadual=inscricao_estadual,
-            inscricao_municipal=inscricao_municipal,
-            email_comercial=email_comercial,
-            email_nfe=email_nfe,
-            regime_tributario=regime_tributario,
-            indicador_ie=indicador_ie,
-            limite_credito=limite_credito,
+            nome_fantasia=nome,
+            documento=doc,
+            razao_social=razao,
+            inscricao_estadual=ie,
+            inscricao_municipal=im,
+            email_comercial=email_c,
+            email_nfe=email_n,
+            regime_tributario=regime,
+            indicador_ie=ind_ie,  # Aqui vai "1", "2" ou "9"
+            limite_credito=float(limite),
+            limite_validade=validade_final,
             observacoes=obs,
-            eh_cliente=eh_cli,  # Agora ele vai respeitar o que você digitou!
-            eh_fornecedor=eh_for,
-            eh_transportadora=eh_tra,
-            eh_seguradora=eh_seg,
+            eh_cliente=True,  # Definido como cliente neste fluxo
+            eh_fornecedor=e_for,
+            eh_transportadora=e_tra,
+            eh_seguradora=e_seg,
             data_cadastramento=datetime.now().strftime("%Y-%m-%d %H:%M")
         )
 
-        # 🟡 <--- INCLUSÃO: Vincula as listas ao objeto para o Repository salvar
-        entidade.enderecos = enderecos_coletados
-        entidade.contatos = contatos_coletados
+        # 6. Listas Vinculadas
+        ent.enderecos = self.fluxo_endereco()
+        ent.contatos = self.fluxo_contato()
 
+        # 7. Persistência
+        self.repo.salvar(ent)
+        print("\n✅ CADASTRO REALIZADO COM SUCESSO!")
 
-        if tipo == 'PJ':
-            print("\n🛡️ EMPRESA PJ: O cadastro de sócios é OBRIGATÓRIO.")
-            self.fluxo_obrigatorio_socios(entidade)
-
-        try:
-            self.repo.salvar(entidade)
-            print(f"\n✅ SUCESSO: '{nome_fantasia}' cadastrado!")
-        except Exception as e:
-            print(f"❌ Erro ao salvar: {e}")
-
-    def fluxo_obrigatorio_socios(self, entidade_pj: Entidade):
-        """Busca sócio ou cadastra um novo 'na hora' como PF"""
-        while True:
-            print("\n🔗 VINCULANDO SÓCIO")
-            doc_socio = input("🔍 CPF do Sócio (ou 'F' para finalizar): ").strip()
-
-            if doc_socio.upper() == 'F':
-                if not entidade_pj.socios:
-                    print("⚠️ PJs devem ter ao menos um sócio vinculado!")
-                    continue
-                break
-
-            socio_existente = self.repo.buscar_por_cpf(doc_socio)
-
-            if socio_existente:
-                print(f"✅ Sócio localizado: {socio_existente.nome_fantasia}")
-                id_socio = socio_existente.id
-                nome_socio = socio_existente.nome_fantasia
-            else:
-                print("✨ Sócio não cadastrado. Iniciando Cadastro Expresso PF...")
-                nome_novo = input("   Nome Completo do Sócio: ").strip()
-
-                # 🟡 NOVO: Coleta endereços e contatos para o SÓCIO também
-                ends_socio = self.fluxo_coleta_endereco()
-                conts_socio = self.fluxo_coleta_contato()
-
-
-                nova_pf = Entidade(
-                    tipo_pessoa='PF',
-                    nome_fantasia=nome_novo,
-                    documento=doc_socio,
-                    eh_cliente=True,
-                    data_cadastramento=datetime.now().strftime("%Y-%m-%d")
-                )
-
-                nova_pf.enderecos = ends_socio
-                nova_pf.contatos = conts_socio
-
-                id_socio = self.repo.salvar(nova_pf)
-                nome_socio = nome_novo
-
-            try:
-                part = float(input(f"📊 % Participação de {nome_socio}: ").replace(',', '.'))
-                hoje_sql = datetime.now().strftime("%Y-%m-%d")
-
-                while True:
-                    d_entrada = input(f"📅 Data Entrada (AAAA-MM-DD) [Enter para {hoje_sql}]: ").strip() or hoje_sql
-                    if self.validar_data(d_entrada): break
-                    print("❌ Formato inválido! Use AAAA-MM-DD.")
-
-                while True:
-                    d_saida = input("📅 Data Saída (AAAA-MM-DD) [Enter se ativo]: ").strip() or None
-                    if not d_saida or self.validar_data(d_saida): break
-                    print("❌ Formato inválido! Use AAAA-MM-DD.")
-
-                cargo = input("💼 Cargo: ").strip() or "Sócio"
-
-                entidade_pj.adicionar_socio(Socio(
-                    socio_entidade_id=id_socio,
-                    participacao=part,
-                    data_entrada=d_entrada,
-                    data_saida=d_saida,
-                    cargo=cargo,
-                    nome_snapshot=nome_socio
-                ))
-                print(f"➕ Sócio {nome_socio} vinculado!")
-            except ValueError:
-                print("❌ Erro nos valores. Tente novamente.")
-
-    def fluxo_coleta_endereco(self):
-        lista = []
-        if input("\n🏠 Cadastrar endereço? (S/N): ").upper() == 'S':
-            tipo = input("   Tipo (PRINCIPAL/COBRANÇA): ").upper() or "PRINCIPAL"
-            cep = input("   CEP: ").strip()
-            rua = input("   Rua: ").strip()
-            num = input("   Número: ").strip()
-            comp = input("   Complemento: ").strip() or None
-            bairro = input("   Bairro: ").strip()
-            cid = input("   Cidade: ").strip()
-            uf = input("   UF: ").upper().strip()
-            ibge = input("   Código IBGE da Cidade (Opcional): ").strip() or None
-            lista.append(Endereco(tipo=tipo, cep=cep, endereco=rua, numero=num, complemento=comp,
-                                  bairro=bairro, cidade=cid, uf=uf, cidade_ibge=ibge))
-        return lista
-
-    # 🟡 <--- FUNÇÃO NOVA: Coleta de dados de Contato
-    def fluxo_coleta_contato(self):
-        lista = []
-        if input("\n📞 Cadastrar contatos telefônicos? (S/N): ").upper() == 'S':
-            while True:
-                tipo = input("   Tipo (WHATSAPP/CELULAR/FIXO): ").upper() or "CELULAR"
-                num = input("   Número: ").strip()
-                nome = input("   Nome do contato: ").strip()
-                lista.append(Contato(tipo=tipo, numero=num, nome_contato=nome))
-                if input("   Adicionar outro? (S/N): ").upper() != 'S': break
-        return lista
-
-
-    def listar_todas(self):
-        lista = self.repo.buscar_flexivel("")
-        print(f"\n{'ID':<4} | {'NOME':<30} | {'DOC':<15} | {'TIPO'}")
-        print("-" * 60)
-        for e in lista:
-            print(f"{e.id:<4} | {e.nome_fantasia[:30]:<30} | {e.documento:<15} | {e.tipo_pessoa}")
-        input("\n[Enter] para voltar...")
-
-    def consultar_detalhes(self):
-        termo = input("\n🔎 ID ou Documento da Entidade: ")
-        ent = self.repo.buscar_por_id_ou_documento(termo)
-
-        if not ent:
-            print("❌ Registro não encontrado no banco de dados.")
-            return
-
-        print("\n" + "═" * 70)
-        print(f"👤 {ent.nome_fantasia} ({ent.tipo_pessoa})")
-        print("═" * 70)
-
-        # --- BLOCO 1: INFORMAÇÕES BÁSICAS E CONTATO ---
-        print(f"🆔 ID: {ent.id:<5} | 📄 Doc: {ent.documento}")
-        print(f"🏢 Razão Social: {ent.razao_social}")
-
-        # Usando o helper do Model para pegar o WhatsApp/Celular
-        whats = ent.obter_whatsapp() or "Não informado"
-        print(f"📧 E-mail: {ent.email_comercial or 'N/A'}")
-        print(f"📞 Contato: {whats}")
-
-        # --- BLOCO 2: ENDEREÇO PRINCIPAL ---
-        # Chamamos o método na INSTÂNCIA 'ent'
-        principal = ent.obter_endereco_principal()
-        if principal:
-            print(f"🏠 Endereço: {principal.endereco}, {principal.numero}")
-            print(f"📍 Bairro: {principal.bairro} - {principal.cidade}/{principal.uf} (CEP: {principal.cep})")
-        else:
-            print("🏠 Endereço: Nenhum endereço principal cadastrado.")
-
-        # --- BLOCO 3: DADOS TRIBUTÁRIOS ---
-        print("-" * 70)
-        print(f"📊 Regime: {ent.regime_tributario or 'N/A'} | IE: {ent.inscricao_estadual or 'ISENTO'}")
-        print(f"💰 Limite de Crédito: R$ {ent.limite_credito:,.2f}")
-
-        # --- BLOCO 4: QUADRO SOCIETÁRIO (Se PJ) ---
-        if ent.tipo_pessoa == 'PJ':
-            print("-" * 70)
-            if ent.socios:
-                print(f"{'👥 QUADRO SOCIETÁRIO':^70}")
-                for s in ent.socios:
-                    status = "✅ Ativo" if not s.data_saida else f"❌ Saiu em {s.data_saida}"
-                    print(f"   • {s.nome_snapshot[:25]:<25} | {s.cargo:<15} | {s.participacao:>5}% | {status}")
-            else:
-                print("⚠️  Esta empresa não possui sócios vinculados.")
-
-        # --- BLOCO 5: PARTICIPAÇÕES (Se PF) ---
-        elif ent.tipo_pessoa == 'PF':
-            participacoes = getattr(ent, 'participacoes_societarias', [])
-            if participacoes:
-                print("-" * 70)
-                print(f"{'💼 PARTICIPAÇÕES EM EMPRESAS (INVESTIMENTOS)':^70}")
-                for p in participacoes:
-                    status = "✅ Ativo" if not p['data_saida'] else "❌ Ex-sócio"
-                    print(f"   • Empresa: {p['nome_empresa'][:20]:<20} | Cargo: {p['cargo']:<15} | {status}")
-
-        # --- BLOCO 6: OBSERVAÇÕES ---
-        if ent.observacoes:
-            print("-" * 70)
-            print(f"📝 Observações: {ent.observacoes}")
-
-        print("═" * 70)
-        input("\n[Pressione Enter para voltar ao menu]")
-
-    def registrar_saida_socio(self):
-        id_empresa = input("\n🏢 ID da Empresa (PJ): ")
-        empresa = self.repo.buscar_por_id(id_empresa)
-        if not empresa or not empresa.socios:
-            print("❌ Empresa sem sócios ativos.")
-            return
-
-        for s in empresa.socios:
-            if not s.data_saida:
-                print(f"ID Vínculo: {s.id} | Sócio: {s.nome_snapshot}")
-
-        id_vinculo = input("\n👉 ID Vínculo do sócio que está saindo: ")
-        while True:
-            data_saida = input("📅 Data de Saída (AAAA-MM-DD): ").strip()
-            if self.validar_data(data_saida): break
-            print("❌ Formato inválido! Use AAAA-MM-DD.")
-
-        self.repo.encerrar_sociedade(id_vinculo, data_saida)
-        print("✅ Saída registrada com sucesso!")
-
-    def alterar_campo_unico(self):
-        termo = input("\n🛠️  ID ou Documento da Entidade: ")
+    def revisao_geral_completa(self):
+        """MÉTODO RESTAURADO: Revisão Mestre + Endereços + Contatos"""
+        termo = input("\n🔎 Digite o ID ou CPF/CNPJ para Revisão Total: ")
         ent = self.repo.buscar_por_id_ou_documento(termo)
         if not ent:
-            print("❌ Entidade não localizada.")
-            return
+            return print("❌ Registro não localizado para revisão.")
 
-        print("\nCampos: 1.Nome, 2.Email_comercial, 3.Obs")
-        op = input("Qual deseja alterar? ")
-        mapa = {"1": "nome_fantasia", "2": "email_comercial", "3": "observacoes"}
+        print("\n" + "═" * 60)
+        print(f"{'MODO DE REVISÃO TOTAL: ' + ent.nome_fantasia:^60}")
+        print("═" * 60)
 
-        if op in mapa:
-            novo_valor = input(f"Novo valor para {mapa[op]}: ").strip()
-            self.repo.atualizar_campo_dinamico(ent.id, mapa[op], novo_valor)
-            print("✅ Campo atualizado!")
-
-
-    def revisao_geral(self):
-        termo = input("\n🔎 ID ou Documento para Revisão Geral: ")
-        ent = self.repo.buscar_por_id_ou_documento(termo)
-        if not ent:
-            print("❌ Entidade não localizada.")
-            return
-
-        print(f"\n--- 🔎 REVISÃO: {ent.nome_fantasia} (Enter para manter) ---")
-
-        # 1. Campos Básicos (Sua lógica que já funciona)
+        # 1. DADOS MESTRES (ENTIDADE)
+        print("\n[1/3] DADOS CADASTRAIS (Deixe vazio para manter o atual):")
         campos = [
             ("Nome Fantasia", "nome_fantasia", ent.nome_fantasia),
             ("Razão Social", "razao_social", ent.razao_social),
             ("E-mail Comercial", "email_comercial", ent.email_comercial),
-            ("Limite Crédito", "limite_credito", ent.limite_credito),
-            ("É Cliente", "eh_cliente", ent.eh_cliente),
-            ("É Fornecedor", "eh_fornecedor", ent.eh_fornecedor),
-            ("É Transportadora", "eh_transportadora", ent.eh_transportadora),
-            ("É Seguradora", "eh_seguradora", ent.eh_seguradora)
+            ("E-mail NFe", "email_nfe", ent.email_nfe),
+            ("Regime Tributário", "regime_tributario", ent.regime_tributario),
+            ("Limite de Crédito", "limite_credito", ent.limite_credito),
+            ("Observações", "observacoes", ent.observacoes)
+        ]
+        for rotulo, col, atual in campos:
+            novo = input(f"🔹 {rotulo} [{atual}]: ").strip()
+            if novo:
+                self.repo.atualizar_campo_dinamico("entidades", col, novo.upper(), ent.id)
+
+        # 2. REVISÃO/INCLUSÃO DE ENDEREÇOS
+        print("\n[2/3] ENDEREÇOS:")
+        if ent.enderecos:
+            for e in ent.enderecos:
+                print(f"--- Editando Endereço: {e.tipo} ---")
+                e_campos = [
+                    ("CEP", "cep", e.cep),
+                    ("Rua", "endereco", e.endereco),
+                    ("Nº", "numero", e.numero),
+                    ("Complemento", "complemento", e.complemento),
+                    ("Bairro", "bairro", e.bairro),
+                    ("Cidade", "cidade", e.cidade),
+                    ("UF", "uf", e.uf)
+                ]
+                for rot, col, val in e_campos:
+                    n = input(f"   🏠 {rot} [{val}]: ").strip()
+                    if n:
+                        self.repo.atualizar_campo_dinamico("entidade_enderecos", col, n.upper(), e.id)
+
+        if input("\n➕ Deseja incluir um NOVO endereço nesta revisão? (S/N): ").upper() == 'S':
+            novos_ends = self.fluxo_endereco()
+            for ne in novos_ends:
+                self.repo.db.execute("""
+                    INSERT INTO entidade_enderecos (entidade_id, tipo, cep, endereco, numero, complemento, bairro, cidade, uf)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (ent.id, ne.tipo, ne.cep, ne.endereco, ne.numero, ne.complemento, ne.bairro, ne.cidade, ne.uf))
+                print(f"   ✔️ Novo endereço ({ne.tipo}) adicionado.")
+
+        # 3. REVISÃO/INCLUSÃO DE CONTATOS
+        print("\n[3/3] CONTATOS:")
+        if ent.contatos:
+            for c in ent.contatos:
+                print(f"--- Editando Contato: {c.tipo} ---")
+                n_contato = input(f"   📞 Número [{c.numero}]: ").strip()
+                if n_contato:
+                    self.repo.atualizar_campo_dinamico("entidade_contatos", "numero", n_contato, c.id)
+                n_nome = input(f"   👤 Nome Contato [{c.nome_contato}]: ").strip()
+                if n_nome:
+                    self.repo.atualizar_campo_dinamico("entidade_contatos", "nome_contato", n_nome.upper(), c.id)
+
+        if input("\n➕ Deseja incluir um NOVO contato nesta revisão? (S/N): ").upper() == 'S':
+            novos_conts = self.fluxo_contato()
+            for nc in novos_conts:
+                self.repo.db.execute("""
+                    INSERT INTO entidade_contatos (entidade_id, tipo, numero, nome_contato)
+                    VALUES (?, ?, ?, ?)
+                """, (ent.id, nc.tipo, nc.numero, nc.nome_contato))
+                print(f"   ✔️ Novo contato ({nc.tipo}) adicionado.")
+
+        print("\n✅ REVISÃO FINALIZADA E DADOS ATUALIZADOS!")
+        input("[Enter para sair]")
+
+    def fluxo_endereco(self):
+        lista = []
+        while input("\n🏠 Cadastrar endereço? (S/N): ").upper() == 'S':
+            t = self.selecionar_opcao("TIPO", {"1": "PRINCIPAL", "2": "COBRANÇA", "3": "ENTREGA"})
+            lista.append(Endereco(tipo=t, cep=input("   CEP: "), endereco=input("   Rua: "), numero=input("   Nº: "),
+                                  complemento=input("   Compl: "), bairro=input("   Bairro: "),
+                                  cidade=input("   Cidade: "), uf=input("   UF: ").upper()))
+        return lista
+
+    def fluxo_contato(self) -> List[Contato]:
+        """
+        MÉTODO INTEGRAL: Realiza a captura de múltiplos contatos.
+        Cobre 100% das colunas da tabela 'entidade_contatos'.
+        """
+        lista: List[Contato] = []
+
+        while True:
+            confirmacao = input("\n📞 Deseja cadastrar um contato? (S/N): ").upper().strip()
+            if confirmacao != 'S':
+                break
+
+            # 1. TIPO (Conforme Schema: 'CELULAR', 'FIXO', 'WHATSAPP')
+            # Usando o dicionário para mapear a escolha do usuário
+            opcoes_tipo = {"1": "WHATSAPP", "2": "CELULAR", "3": "FIXO"}
+            tipo_selecionado = self.selecionar_opcao("TIPO DE CONTATO", opcoes_tipo)
+
+            # 2. NÚMERO (NOT NULL no Schema)
+            while True:
+                numero = input("   Nº do Telefone/WhatsApp: ").strip()
+                if numero:
+                    break
+                print("   ⚠️ O número é obrigatório para o cadastro de contatos.")
+
+            # 3. NOME DO CONTATO (Coluna 'nome_contato' do Schema)
+            # Ex: 'Setor de Compras', 'João Gerente'
+            nome = input("   Nome da Pessoa ou Setor: ").strip().upper()
+
+            # 4. INSTANCIAÇÃO E ADIÇÃO À LISTA
+            # Criamos o objeto Contato passando todos os parâmetros
+            novo_contato = Contato(
+                tipo=tipo_selecionado,
+                numero=numero,
+                nome_contato=nome
+            )
+
+            lista.append(novo_contato)
+            print(f"   ✔️ Contato '{nome}' adicionado com sucesso.")
+
+        return lista
+
+    def editar_entidade_completa(self):
+        """
+        ALTERAÇÃO TOTAL E ABSOLUTA: Mapeamento fiel ao Schema Completo.
+        Não suprime nenhum campo das tabelas Entidades, Endereços, Contatos e Sócios.
+        """
+        termo = input("\n🔎 Digite o ID ou CPF/CNPJ para ALTERAÇÃO TOTAL: ")
+        ent = self.repo.buscar_por_id_ou_documento(termo)
+
+        if not ent:
+            return print("❌ Registro não localizado para alteração.")
+
+        print("\n" + "═" * 80)
+        print(f"{'MODO EDIÇÃO MESTRE: ' + ent.nome_fantasia:^80}")
+        print(f"{'Pressione [ENTER] para manter o valor atual':^80}")
+        print("═" * 80)
+
+        # --- 1. TABELA: entidades (TODOS OS CAMPOS) ---
+        campos_mestre = [
+            ("Tipo (PF/PJ)", "tipo_pessoa", ent.tipo_pessoa),
+            ("Nome Fantasia", "nome_fantasia", ent.nome_fantasia),
+            ("Razão Social", "razao_social", ent.razao_social),
+            ("Documento (CPF/CNPJ)", "documento", ent.documento),
+            ("Inscrição Estadual", "inscricao_estadual", ent.inscricao_estadual),
+            ("Inscrição Municipal", "inscricao_municipal", ent.inscricao_municipal),
+            ("E-mail Comercial", "email_comercial", ent.email_comercial),
+            ("E-mail NFe", "email_nfe", ent.email_nfe),
+            ("Regime Tributário", "regime_tributario", ent.regime_tributario),
+            ("Indicador IE", "indicador_ie", ent.indicador_ie),
+            ("Limite de Crédito", "limite_credito", ent.limite_credito),
+            ("Observações", "observacoes", ent.observacoes),
         ]
 
-        for rotulo, coluna, valor_atual in campos:
-            novo = input(f"{rotulo} [{valor_atual}]: ").strip()
+        for rotulo, col, atual in campos_mestre:
+            novo = input(f"🔹 {rotulo} [{atual}]: ").strip()
             if novo:
-                valor_final = (1 if novo.upper() in ['S', '1', 'SIM'] else 0) if coluna.startswith('eh_') else novo
-                self.repo.atualizar_campo_dinamico(ent.id, coluna, valor_final)
+                valor = float(novo.replace(',', '.')) if col == "limite_credito" else novo.upper()
+                self.repo.atualizar_campo_dinamico("entidades", col, valor, ent.id)
 
-        # 🟡 2. REVISÃO DE ENDEREÇOS (Inclusão)
-        self.revisar_vinculos_endereco(ent)
+        # --- 2. FLAGS DE PERFIL (BOOLEANS) ---
+        print("\n--- Perfil da Entidade ---")
+        flags = [
+            ("É Cliente?", "eh_cliente", ent.eh_cliente),
+            ("É Fornecedor?", "eh_fornecedor", ent.eh_fornecedor),
+            ("É Transportadora?", "eh_transportadora", ent.eh_transportadora),
+            ("É Seguradora?", "eh_seguradora", ent.eh_seguradora)
+        ]
+        for rotulo, col, atual in flags:
+            novo = input(f"🔹 {rotulo} (S/N) [{'S' if atual else 'N'}]: ").strip().upper()
+            if novo in ['S', 'N']:
+                self.repo.atualizar_campo_dinamico("entidades", col, 1 if novo == 'S' else 0, ent.id)
 
-        # 🟡 3. REVISÃO DE CONTATOS (Inclusão)
-        self.revisar_vinculos_contato(ent)
-
-        print("\n✅ Revisão completa finalizada!")
-
-    def revisar_vinculos_endereco(self, ent):
-        print("\n🏠 --- REVISÃO DE ENDEREÇOS ---")
+        # --- 3. TABELA: entidade_enderecos (TODOS OS CAMPOS) ---
         if ent.enderecos:
+            print("\n" + "─" * 40 + "\n📍 EDITANDO ENDEREÇOS\n" + "─" * 40)
             for end in ent.enderecos:
-                print(f"📍 Endereço Atual: {end.tipo}")
+                print(f"\nID Endereço: {end.id} [{end.tipo}]")
+                campos_end = [
+                    ("Tipo (PRINCIPAL/ENTREGA/COBRANCA)", "tipo", end.tipo),
+                    ("CEP", "cep", end.cep),
+                    ("Endereço", "endereco", end.endereco),
+                    ("Número", "numero", end.numero),
+                    ("Complemento", "complemento", end.complemento),
+                    ("Bairro", "bairro", end.bairro),
+                    ("Cidade", "cidade", end.cidade),
+                    ("UF", "uf", end.uf),
+                    ("Cidade IBGE", "cidade_ibge", end.cidade_ibge)
+                ]
+                for rot, col, val in campos_end:
+                    n = input(f"   🏠 {rot} [{val}]: ").strip()
+                    if n:
+                        v = int(n) if col == "cidade_ibge" else n.upper()
+                        self.repo.atualizar_campo_dinamico("entidade_enderecos", col, v, end.id)
 
-                # Ordem lógica para futura API: CEP primeiro
-                novo_cep = input(f"   CEP [{end.cep}]: ").strip()
-                nova_uf = input(f"   UF [{end.uf}]: ").strip().upper()
-                nova_cid = input(f"   Cidade [{end.cidade}]: ").strip()
-                novo_bai = input(f"   Bairro [{end.bairro}]: ").strip()
-                novo_rua = input(f"   Rua [{end.endereco}]: ").strip()
-                novo_num = input(f"   Número [{end.numero}]: ").strip()
-                novo_com = input(f"   Complemento [{end.complemento}]: ").strip()
-
-                # Se houve qualquer mudança, atualizamos o objeto e o banco
-                if any([novo_cep, nova_uf, nova_cid, novo_bai, novo_rua, novo_num, novo_com]):
-                    end.cep = novo_cep or end.cep
-                    end.uf = nova_uf or end.uf
-                    end.cidade = nova_cid or end.cidade
-                    end.bairro = novo_bai or end.bairro
-                    end.endereco = novo_rua or end.endereco
-                    end.numero = novo_num or end.numero
-                    end.complemento = novo_com or end.complemento
-
-                    # Chamada ao Repository respeitando a assinatura da função
-                    self.repo.atualizar_endereco_id(
-                        end.id,  # endereco_id
-                        end.endereco,  # logradouro
-                        end.numero,  # numero
-                        end.complemento,  # complemento
-                        end.bairro,  # bairro
-                        end.cidade,  # cidade
-                        end.uf,  # uf
-                        end.cep  # cep
-                    )
-                    print("   ✅ Alterações gravadas com sucesso!")
-
-    def revisar_vinculos_contato(self, ent):
-        print("\n📞 --- REVISÃO DE CONTATOS ---")
+        # --- 4. TABELA: entidade_contatos (TODOS OS CAMPOS) ---
         if ent.contatos:
-            for cont in ent.contatos:
-                novo_num = input(f"   {cont.tipo} - {cont.nome_contato} [{cont.numero}]: ").strip()
-                if novo_num:
-                    self.repo.atualizar_contato_id(cont.id, novo_num)
-                    print("   ✅ Contato atualizado.")
-        else:
-            # 🟡 Se não existir, oferece para cadastrar agora!
-            print("⚠️ Nenhum contato cadastrado para esta entidade.")
-            if input("👉 Deseja cadastrar um contato agora? (S/N): ").upper() == 'S':
-                novo_cont_lista = self.fluxo_coleta_contato()
-                if novo_cont_lista:
-                    self.repo.salvar_contatos_vinculados(ent.id, novo_cont_lista)
-                    print("✅ Novo contato adicionado com sucesso!")
+            print("\n" + "─" * 40 + "\n📞 EDITANDO CONTATOS\n" + "─" * 40)
+            for con in ent.contatos:
+                print(f"\nID Contato: {con.id}")
+                campos_con = [
+                    ("Tipo (CELULAR/FIXO/WHATSAPP)", "tipo", con.tipo),
+                    ("Referência/Nome", "nome_contato", con.nome_contato),
+                    ("Número", "numero", con.numero)
+                ]
+                for rot, col, val in campos_con:
+                    n = input(f"   📞 {rot} [{val}]: ").strip()
+                    if n:
+                        self.repo.atualizar_campo_dinamico("entidade_contatos", col, n.upper(), con.id)
 
+        # --- 5. TABELA: socios (TODOS OS CAMPOS + SNAPSHOT) ---
+        if ent.socios:
+            print("\n" + "─" * 40 + "\n👥 EDITANDO QUADRO SOCIETÁRIO\n" + "─" * 40)
+            for soc in ent.socios:
+                print(f"\nID Vínculo: {soc.id}")
+                campos_soc = [
+                    ("Participação %", "percentual_participacao", soc.participacao),
+                    ("Cargo", "cargo", soc.cargo),
+                    ("Data Entrada (AAAA-MM-DD)", "data_entrada", soc.data_entrada),
+                    ("Data Saída (AAAA-MM-DD)", "data_saida", soc.data_saida),
+                    ("Nome Snapshot", "nome_snapshot", soc.nome_snapshot)
+                ]
+                for rot, col, val in campos_soc:
+                    n = input(f"   👥 {rot} [{val}]: ").strip()
+                    if n:
+                        v = float(n.replace(',', '.')) if col == "percentual_participacao" else n.upper()
+                        self.repo.atualizar_campo_dinamico("socios", col, v, soc.id)
 
-    def exibir_clientes_com_socios(self):
-        # Agora buscar_clientes() retorna uma lista de OBJETOS Entidade
-        clientes = self.repo.buscar_clientes()
+        print("\n✅ ALTERAÇÃO MESTRE FINALIZADA COM SUCESSO!")
+        input("[Enter para retornar]")
 
-        if not clientes:
-            print("⚠️ Nenhum cliente encontrado no banco.")
-            return
-
-        print("\n" + "═" * 95)
-        print(f"{'👥 RELAÇÃO GERAL DE CLIENTES E VÍNCULOS':^95}")
-        print("═" * 95)
-        print(f"{'ID':<4} | {'NOME / RAZÃO SOCIAL':<35} | {'DOCUMENTO':<15} | {'TIPO'}")
-        print("─" * 95)
-
-        for c in clientes:
-            # Como 'c' é um objeto, usamos o ponto (.)
-            print(f"{c.id:03}  | {c.nome_fantasia[:35]:<35} | {c.documento:<15} | {c.tipo_pessoa} ")
-
-            # LADO A: Se for Empresa (PJ), mostra quem são os sócios dela
-            if c.tipo_pessoa == 'PJ':
-                if c.socios:
-                    for s in c.socios:
-                        print(f"     └─ [Quadro societário] {s.cargo}: {s.nome_snapshot}  Participação=> {s.participacao} %")
-                else:
-                    print("     └─ (Nenhum sócio vinculado)")
-
-            # LADO B: Se for Pessoa (PF), mostra de quais empresas ela é sócia
-            elif c.tipo_pessoa == 'PF':
-                # Verificamos o atributo que criamos no buscar_por_id
-                participacoes = getattr(c, 'participacoes_societarias', [])
-                if participacoes:
-                    for p in participacoes:
-                        print(f"     └─ [É Sócio na Empresa] {p['nome_empresa']} ({p['cargo']}) | Participação: {p['percentual_participacao']}% ")
-                else:
-                    print("     └─ [Pessoa Física sem participações]")
-
-            print("─" * 95)
+    def converter_data_br_para_iso(self, data_br: str) -> str:
+        """Converte DD/MM/AAAA para AAAA-MM-DD"""
+        try:
+            if not data_br:
+                return datetime.now().strftime("%Y-%m-%d")
+            # Converte o padrão brasileiro para objeto datetime e depois para string ISO
+            return datetime.strptime(data_br, "%d/%m/%y").strftime("%Y-%m-%d") if len(data_br) == 8 \
+                else datetime.strptime(data_br, "%d/%m/%Y").strftime("%Y-%m-%d")
+        except ValueError:
+            print("⚠️ Data inválida! Usando data de hoje como padrão.")
+            return datetime.now().strftime("%Y-%m-%d")

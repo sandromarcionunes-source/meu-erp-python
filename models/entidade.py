@@ -4,25 +4,27 @@ from models.entidade_enderecos import Endereco
 
 class Entidade:
     def __init__(
-        self,
-        tipo_pessoa: str,
-        nome_fantasia: str,
-        documento: str,
-        razao_social: str | None = None,
-        inscricao_estadual: str | None = None,
-        inscricao_municipal: str | None = None,
-        email_comercial: str | None = None,
-        email_nfe: str | None = None,
-        regime_tributario: str | None = None,
-        indicador_ie: str = "9",
-        limite_credito: float = 0.0,
-        observacoes: str | None = None,
-        eh_cliente: bool = False,
-        eh_fornecedor: bool = False,
-        eh_transportadora: bool = False,
-        eh_seguradora: bool = False,
-        id: int | None = None,
-        data_cadastramento: str | None = None
+            self,
+            tipo_pessoa: str,
+            nome_fantasia: str,
+            documento: str,
+            razao_social: str | None = None,
+            inscricao_estadual: str | None = None,
+            inscricao_municipal: str | None = None,
+            email_comercial: str | None = None,
+            email_nfe: str | None = None,
+            regime_tributario: str | None = None,
+            indicador_ie: str = "9",
+            limite_credito: float = 0.0,
+            limite_validade: str | None = None,
+            bloqueado: bool = False, # 🛠️ Adicionado aqui
+            observacoes: str | None = None,
+            eh_cliente: bool = False,
+            eh_fornecedor: bool = False,
+            eh_transportadora: bool = False,
+            eh_seguradora: bool = False,
+            id: int | None = None,
+            data_cadastramento: str | None = None
     ):
         self.id = id
         self.tipo_pessoa = tipo_pessoa.upper()
@@ -33,9 +35,11 @@ class Entidade:
         self.inscricao_municipal = inscricao_municipal or ""
         self.email_comercial = email_comercial.upper() if email_comercial else None
         self.email_nfe = email_nfe.upper() if email_nfe else None
-        self.regime_tributario = regime_tributario.upper() if regime_tributario else None
-        self.indicador_ie = indicador_ie
+        self.regime_tributario = str(regime_tributario).upper() if regime_tributario else None
+        self.indicador_ie = str(indicador_ie)
         self.limite_credito = float(limite_credito or 0)
+        self.limite_validade = limite_validade
+        self.bloqueado = bool(bloqueado) # 🛠️ Adicionado aqui
         self.observacoes = observacoes.upper() if observacoes else None
         self.eh_cliente = bool(eh_cliente)
         self.eh_fornecedor = bool(eh_fornecedor)
@@ -47,8 +51,7 @@ class Entidade:
         self.socios: list[Socio] = []
 
     def adicionar_endereco(self, endereco: Endereco) -> None:
-        """Adiciona um endereço garantindo que o tipo seja padronizado."""
-        # Exemplo de regra: impedir tipos de endereços duplicados se desejar
+        """Adiciona um endereço à lista."""
         self.enderecos.append(endereco)
 
     def adicionar_contato(self, contato: Contato) -> None:
@@ -56,34 +59,29 @@ class Entidade:
         self.contatos.append(contato)
 
     def adicionar_socio(self, socio: Socio) -> None:
-        """
-        Adiciona um sócio apenas se a entidade for Pessoa Jurídica.
-        Regra de negócio: PF não tem sócios no contrato social.
-        """
+        """Adiciona um sócio apenas se for PJ (Regra de Negócio)."""
         if self.tipo_pessoa == 'PJ':
             self.socios.append(socio)
         else:
-            raise ValueError("Não é possível adicionar sócios a uma Pessoa Física.")
+            # Em vez de travar o programa com erro, podemos apenas ignorar ou avisar
+            print(f"⚠️ Aviso: Não é possível adicionar sócio à Pessoa Física ({self.nome_fantasia}).")
 
-        # --- HELPERS (Ajudantes Internos) ---
+    # --- HELPERS ---
 
     def obter_endereco_principal(self) -> Endereco | None:
-        """Busca o endereço marcado como principal ou o primeiro da lista."""
+        """Busca o endereço PRINCIPAL (ajustado para bater com o menu numérico)."""
         for end in self.enderecos:
-            if end.tipo.upper() == 'PRINCIPAL':
+            if str(end.tipo).upper() == 'PRINCIPAL':
                 return end
         return self.enderecos[0] if self.enderecos else None
 
     def obter_whatsapp(self) -> str | None:
-        """Busca o primeiro contato do tipo WHATSAPP ou CELULAR."""
+        """Busca contatos de comunicação rápida."""
         for cont in self.contatos:
-            if cont.tipo.upper() in ['WHATSAPP', 'CELULAR']:
+            if str(cont.tipo).upper() in ['WHATSAPP', 'CELULAR']:
                 return cont.numero
         return None
 
-    # --- REPRESENTAÇÃO ---
-
     def __repr__(self) -> str:
-        """Facilita o debug: print(entidade) mostrará os dados básicos."""
         return (f"Entidade(id={self.id}, nome='{self.nome_fantasia}', "
                 f"doc='{self.documento}', tipo='{self.tipo_pessoa}')")

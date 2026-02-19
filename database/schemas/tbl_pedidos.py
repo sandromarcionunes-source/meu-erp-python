@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     valor_frete REAL DEFAULT 0,
     valor_total_produtos REAL DEFAULT 0,
     valor_total_pedido REAL DEFAULT 0,
-    status TEXT DEFAULT 'CONCLUIDO', -- 'CONCLUIDO' ou 'RESERVADO'
+    status TEXT DEFAULT 'ORCAMENTO',
     FOREIGN KEY (entidade_id) REFERENCES entidades (id)
 );
 
@@ -21,10 +21,10 @@ CREATE TABLE IF NOT EXISTS pedido_itens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     pedido_id INTEGER NOT NULL,
     produto_id INTEGER NOT NULL,
-    produto_nome_snap TEXT, -- Nome do produto na hora da venda
+    produto_nome_snap TEXT,
     quantidade REAL NOT NULL,
     preco_venda REAL NOT NULL,
-    desconto REAL DEFAULT 0, -- Padronizado com seu PedidoItem
+    desconto REAL DEFAULT 0,
     subtotal REAL NOT NULL,
     FOREIGN KEY (pedido_id) REFERENCES pedidos (id) ON DELETE CASCADE,
     FOREIGN KEY (produto_id) REFERENCES produtos (id)

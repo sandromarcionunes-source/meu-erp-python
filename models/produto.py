@@ -1,23 +1,46 @@
 class Produto:
-    def __init__(self, **kwargs):
-        self.id = kwargs.get('id')
-        self.codigo_interno = kwargs.get('codigo_interno')
-        self.tipo_item = kwargs.get('tipo_item')
-        self.nome = kwargs.get('nome')
-        self.unidade = kwargs.get('unidade')
-        self.categoria = kwargs.get('categoria')
-        self.marca = kwargs.get('marca')
-        self.modelo_versao = kwargs.get('modelo_versao')
-        self.ncm = kwargs.get('ncm')
-        self.cest = kwargs.get('cest')
-        self.origem = kwargs.get('origem', 0)
-        self.peso_liquido = kwargs.get('peso_liquido', 0.0)
-        self.peso_bruto = kwargs.get('peso_bruto', 0.0)
-        self.preco_custo = kwargs.get('preco_custo', 0.0)
-        self.preco_venda = kwargs.get('preco_venda', 0.0)
-        self.estoque_atual = kwargs.get('estoque_atual', 0.0)
-        self.estoque_reservado = kwargs.get('estoque_reservado', 0.0)
-        self.estoque_minimo = kwargs.get('estoque_minimo', 0.0)
-        self.observacoes = kwargs.get('observacoes', "")
-        self.data_cadastramento = kwargs.get('data_cadastramento')
-        self.ativo = kwargs.get('ativo', 1)
+    def __init__(
+            self,
+            nome: str,
+            tipo_item: str = "00",
+            unidade: str = "UN",
+            categoria: str = None,
+            codigo_interno: str = None,
+            preco_custo: float = 0.0,
+            preco_venda: float = 0.0,
+            estoque_atual: float = 0.0,
+            estoque_reservado: float = 0.0,
+            estoque_minimo: float = 0.0,
+            peso_liquido: float = 0.0,
+            peso_bruto: float = 0.0,
+            ativo: int = 1,
+            marca: str = "",
+            modelo_versao: str = "", # Sincronizado com Schema
+            ncm: str = "",
+            cest: str = "",
+            origem: str = "0",
+            observacoes: str = "",
+            data_cadastramento: str = None,
+            id: int | None = None
+    ):
+        self.id = id
+        self.codigo_interno = codigo_interno # 👈 Substituído sku por codigo_interno
+        self.tipo_item = tipo_item
+        self.nome = nome.upper()
+        self.unidade = unidade.upper()
+        self.categoria = categoria.upper() if categoria else None
+        self.marca = marca.upper() if marca else None
+        self.modelo_versao = modelo_versao.upper() if modelo_versao else None
+        self.ncm = ncm
+        self.cest = cest
+        self.origem = origem
+        self.preco_custo = float(preco_custo)
+        self.preco_venda = float(preco_venda)
+        self.estoque_atual = float(estoque_atual)
+        self.estoque_reservado = float(estoque_reservado)
+        self.estoque_minimo = float(estoque_minimo)
+        self.peso_liquido = float(peso_liquido)
+        self.peso_bruto = float(peso_bruto)
+        self.observacoes = observacoes
+        self.data_cadastramento = data_cadastramento
+        self.ativo = ativo

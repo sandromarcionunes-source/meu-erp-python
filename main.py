@@ -14,6 +14,9 @@ from repositories.config_repository import ConfigRepository
 from repositories.compra_repository import CompraRepository
 from repositories.emissor_repository import EmissorRepository
 from repositories.seguro_repository import SeguroRepository
+from repositories.analise_credito_repository import AnaliseCreditoRepository
+
+
 from services.compra_service import CompraService
 from services.produto_service import ProdutoService
 from services.pedido_service import PedidoService
@@ -22,7 +25,18 @@ from services.entidade_service import EntidadeService
 from services.config_service import ConfigService
 from services.emissor_service import EmissorService
 from services.seguro_service import SeguroService
+from services.analise_credito_service import AnaliseCreditoService
 from menus.menu_principal import MenuPrincipal
+
+def rodar_sistema():
+    while True:
+        try:
+            # Aqui chama o menu que você já tem
+            MenuPrincipal()
+        except KeyboardInterrupt:
+            # Se o usuário apertar Ctrl+C em qualquer lugar do sistema...
+            print("\n\n🔄 Operação cancelada pelo usuário. Retornando ao Menu Principal...")
+            continue # Ele ignora o erro e volta para o início do loop
 
 
 def main():
@@ -42,11 +56,20 @@ def main():
     repo_compra = CompraRepository(db)
     repo_emissor = EmissorRepository(db)
     repo_seguro = SeguroRepository(db)
+    analise_repo = AnaliseCreditoRepository(db)
+
 
     # 3. Inicializa os Serviços
+    service_analise = AnaliseCreditoService(analise_repo)
     service_entidade = EntidadeService(repo_entidades)
     service_produto = ProdutoService(repo_produto)
-    service_pedido = PedidoService(repo_pedido,repo_entidades,repo_produto,repo_pagamento,repo_config)
+    service_pedido = PedidoService(
+        repo_pedido,
+        repo_entidades,
+        repo_produto,
+        repo_pagamento,
+        service_analise,
+        repo_config)
     service_compra = CompraService(repo_compra, repo_entidades, repo_produto, repo_config)
     service_seguro = SeguroService(repo_seguro, repo_entidades)
     service_configuracao = ConfigService(repo_config)
@@ -64,17 +87,17 @@ def main():
         "6": {"nome": "Seguro", "funcao": service_seguro.exibir_menu},
         "7": {"nome": "Configuracoes diversas", "funcao": service_configuracao.exibir_menu},
         "8": {"nome": "Banco Dados", "funcao": service_banco_dados.exibir_menu},
+        "9": {"nome": "Analise de credito", "funcao": service_analise.exibir_menu},
     }
 
     menu = MenuPrincipal(modulos)
 
-    # 5. "Loop" Principal do Sistema
-    try:
-        menu.exibir()
-    except KeyboardInterrupt:
-        print("\n\nSaindo do sistema... Até logo! 👋")
-    except Exception as e:
-        print(f"\n❌ Ocorreu um erro inesperado: {e}")
+    # 5. "Loop" Principal com Escotilha de Escape (Ajustado)
+    print("\n💡 DICA: Pressione Ctrl + C para cancelar qualquer ação e voltar ao Menu Principal.")
+
+
+    menu.exibir()
+
 
 if __name__ == "__main__":
     main()

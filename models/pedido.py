@@ -4,7 +4,8 @@ class PedidoItem:
         self.produto_nome_snap = produto_nome_snap
         self.quantidade = quantidade
         self.preco_venda = preco_venda
-        self.desconto = desconto if desconto <= preco_venda else 0
+        self.desconto = desconto
+        # O subtotal já nasce calculado corretamente
         self.subtotal = quantidade * (self.preco_venda - self.desconto)
 
 class Pedido:
@@ -16,6 +17,7 @@ class Pedido:
         self.total_parcelas = 1
         self.intervalo_dias = 30
         self.valor_frete = 0.0
+        # Snapshots para auditoria
         self.cliente_nome_snap = ""
         self.cliente_documento_snap = ""
         self.cliente_endereco_snap = ""
@@ -23,6 +25,7 @@ class Pedido:
         self.itens = []
         self.valor_total_produtos = 0.0
         self.valor_total_pedido = 0.0
+        self.status = "ORCAMENTO"
 
     def adicionar_item(self, item: PedidoItem):
         self.itens.append(item)
