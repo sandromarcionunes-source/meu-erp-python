@@ -1,4 +1,4 @@
-from models.constants import StatusPedido
+from models.constants import StatusCredito, SituacaoEstoque, SituacaoLogistica
 
 class PedidoRepository:
     def __init__(self, db_manager):
@@ -6,20 +6,21 @@ class PedidoRepository:
 
     def salvar(self, pedido):
         try:
-            status_atual = pedido.status
+
             # 🟥 ORDEM SINCRONIZADA COM SEU SCHEMA:
             sql_p = """INSERT INTO pedidos (
                 entidade_id, cliente_nome_snap, cliente_documento_snap, 
                 cliente_endereco_snap, cliente_email_snap, data_emissao, 
                 forma_pagamento, total_parcelas, intervalo_dias, 
-                valor_frete, valor_total_produtos, valor_total_pedido, status
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+                valor_frete, valor_total_produtos, valor_total_pedido, status_credito, situacao_estoque, situacao_logistica
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
 
             params_p = (
                 pedido.entidade_id, pedido.cliente_nome_snap, pedido.cliente_documento_snap,
                 pedido.cliente_endereco_snap, pedido.cliente_email_snap, pedido.data_emissao,
                 pedido.forma_pagamento, pedido.total_parcelas, pedido.intervalo_dias,
-                pedido.valor_frete, pedido.valor_total_produtos, pedido.valor_total_pedido, status_atual
+                pedido.valor_frete, pedido.valor_total_produtos, pedido.valor_total_pedido, pedido.status_credito,
+                pedido.situacao_estoque,pedido.situacao_logistica
             )
 
             # 🟨 VACINA DO CURSOR (IGUAL COMPRAS)
@@ -41,11 +42,11 @@ class PedidoRepository:
                 ))
 
                 # 🟦 LÓGICA DE ESTOQUE: Usando o import StatusPedido
-                if StatusPedido.reserva_estoque(status_atual):
+                if pedido.situacao_estoque == SituacaoEstoque.RESERVADO:
                     self.db.execute("UPDATE produtos SET estoque_reservado = estoque_reservado + ? WHERE id = ?",
                                     (item.quantidade, item.produto_id))
 
-                if status_atual == "CONCLUIDO":
+                elif pedido.situacao_estoque == SituacaoEstoque.BAIXADO:
                     self.db.execute("UPDATE produtos SET estoque_atual = estoque_atual - ? WHERE id = ?",
                                     (item.quantidade, item.produto_id))
 
@@ -58,21 +59,22 @@ class PedidoRepository:
     def listar_todos(self):
         return self.db.fetch_all("SELECT * FROM pedidos ORDER BY id DESC")
 
+
     def buscar_itens_por_pedido(self, pedido_id):
         return self.db.fetch_all("SELECT * FROM pedido_itens WHERE pedido_id = ?", (pedido_id,))
 
     def deletar_com_estorno(self, pedido_id):
-        p = self.db.fetch_one("SELECT status FROM pedidos WHERE id = ?", (pedido_id,))
+        p = self.db.fetch_one("SELECT situacao_estoque FROM pedidos WHERE id = ?", (pedido_id,))
         if not p: return False
 
-        status_p = p['status'] if isinstance(p, dict) else p[0]
+        sit_est = p['situacao_estoque'] if isinstance(p, dict) else p[0]
         itens = self.buscar_itens_por_pedido(pedido_id)
 
         for it in itens:
-            if StatusPedido.reserva_estoque(status_p):
+            if sit_est == SituacaoEstoque.RESERVADO:
                 self.db.execute("UPDATE produtos SET estoque_reservado = estoque_reservado - ? WHERE id = ?",
                                 (it['quantidade'], it['produto_id']))
-            elif status_p == "CONCLUIDO":
+            elif sit_est == SituacaoEstoque.BAIXADO:
                 self.db.execute("UPDATE produtos SET estoque_atual = estoque_atual + ? WHERE id = ?",
                                 (it['quantidade'], it['produto_id']))
 
@@ -94,3 +96,6 @@ class PedidoRepository:
         except Exception as e:
             print(f"❌ Erro na busca de cliente via PedidoRepository: {e}")
             return None
+
+    def buscar_por_id(self, pedido_id):
+        return self.db.fetch_one("SELECT * FROM pedidos WHERE id = ?", (pedido_id,))

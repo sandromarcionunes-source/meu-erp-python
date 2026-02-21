@@ -102,15 +102,34 @@ class ProdutoService:
         except ValueError:
             print("\n❌ Erro: Verifique os valores numéricos.")
 
+    # def listar(self):
+    #     itens = self.repo.buscar_todos()
+    #     print("\n" + "═" * 105)
+    #     print(f"{'SKU':<6} | {'DESCRIÇÃO':<40} | {'VENDA':>10} | {'ATUAL':>10} | {'RESERV.':>10}")
+    #     print("─" * 105)
+    #     for i in itens:
+    #         desc = f"{i.nome} {i.marca or ''}".strip()
+    #         print(
+    #             f"{i.codigo_interno:<6} | {desc[:40]:<40} | R${i.preco_venda:>8.2f} | {i.estoque_atual:>10.2f} | {i.estoque_reservado:>10.2f}")
+
     def listar(self):
         itens = self.repo.buscar_todos()
-        print("\n" + "═" * 105)
-        print(f"{'SKU':<6} | {'DESCRIÇÃO':<40} | {'VENDA':>10} | {'ATUAL':>10} | {'RESERV.':>10}")
-        print("─" * 105)
+        print("\n" + "═" * 110)
+        # Adicionamos o cabeçalho 'DISP.'
+        print(f"{'SKU':<6} | {'DESCRIÇÃO':<40} | {'VENDA':>10} | {'ATUAL':>10} | {'RESV.':>10} | {'DISP.':>10}")
+        print("─" * 110)
+
         for i in itens:
             desc = f"{i.nome} {i.marca or ''}".strip()
-            print(
-                f"{i.codigo_interno:<6} | {desc[:40]:<40} | R${i.preco_venda:>8.2f} | {i.estoque_atual:>10.2f} | {i.estoque_reservado:>10.2f}")
+
+            # 🟢 A CONTA DIRETA: Pegamos os valores que já existem e subtraímos aqui
+            disponivel = i.estoque_atual - i.estoque_reservado
+
+            print(f"{i.codigo_interno:<6} | {desc[:40]:<40} | R${i.preco_venda:>8.2f} | "
+                  f"{i.estoque_atual:>10.2f} | {i.estoque_reservado:>10.2f} | {disponivel:>10.2f}")
+
+
+
 
     def consultar_detalhado(self):
         termo = input("\n🔎 SKU ou Nome: ").strip()
@@ -229,3 +248,4 @@ class ProdutoService:
 
         except ValueError:
             print("\n❌ ERRO: Verifique os valores numéricos. Alteração cancelada.")
+

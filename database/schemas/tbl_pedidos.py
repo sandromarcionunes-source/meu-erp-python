@@ -13,7 +13,10 @@ CREATE TABLE IF NOT EXISTS pedidos (
     valor_frete REAL DEFAULT 0,
     valor_total_produtos REAL DEFAULT 0,
     valor_total_pedido REAL DEFAULT 0,
-    status TEXT DEFAULT 'ORCAMENTO',
+    -- 🚀 AS 3 COLUNAS QUE O SEU CÓDIGO PRECISA:
+    status_credito TEXT DEFAULT 'PENDENTE',
+    situacao_estoque TEXT DEFAULT 'NAO_MOVIMENTADO',
+    situacao_logistica TEXT DEFAULT 'PENDENTE',
     FOREIGN KEY (entidade_id) REFERENCES entidades (id)
 );
 

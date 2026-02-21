@@ -1,3 +1,6 @@
+from models.constants import StatusCredito, SituacaoEstoque, SituacaoLogistica
+
+
 class PedidoItem:
     def __init__(self, produto_id, produto_nome_snap, quantidade, preco_venda, desconto=0):
         self.produto_id = produto_id
@@ -25,7 +28,9 @@ class Pedido:
         self.itens = []
         self.valor_total_produtos = 0.0
         self.valor_total_pedido = 0.0
-        self.status = "ORCAMENTO"
+        self.status_credito = StatusCredito.PENDENTE
+        self.situacao_estoque = SituacaoEstoque.NAO_MOVIMENTADO
+        self.situacao_logistica = SituacaoLogistica.PENDENTE
 
     def adicionar_item(self, item: PedidoItem):
         self.itens.append(item)
