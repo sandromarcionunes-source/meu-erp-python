@@ -99,3 +99,9 @@ class PedidoRepository:
 
     def buscar_por_id(self, pedido_id):
         return self.db.fetch_one("SELECT * FROM pedidos WHERE id = ?", (pedido_id,))
+
+    # 🟢 ADICIONE ISSO AQUI:
+    def buscar(self, pedido_id=None):
+        if pedido_id is None:
+            return self.listar_todos()
+        return self.buscar_por_id(pedido_id)

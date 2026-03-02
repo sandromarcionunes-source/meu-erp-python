@@ -2,6 +2,7 @@ from models.entidade import Entidade
 from models.socio import Socio
 from models.entidade_enderecos import Endereco
 from models.entidade_contatos import Contato
+from models.constants import StatusCredito
 from datetime import datetime
 from typing import List
 
@@ -165,40 +166,71 @@ class EntidadeService:
 
     def consultar_detalhes(self):
         """OPÇÃO 3: Exibição completa e organizada de todos os dados."""
-        # Aplicando sua mudança de 'Documento' para 'CPF/CNPJ'
         termo = input("\n🔎 Digite o ID ou CPF/CNPJ para consulta: ")
         ent = self.repo.buscar_por_id_ou_documento(termo)
         if not ent:
             return print("❌ Registro não localizado.")
 
+        # 🟢 CORREÇÃO CRÍTICA: Alinhamento com o Schema do PedidoRepository
+        utilizado = 0.0
+        try:
+            # Regra de 01/03/2026: Considerar Aprovados e Faturados
+            status_consumo = (StatusCredito.APROVADO, StatusCredito.FATURADO)
+            placeholders = ', '.join(['?'] * len(status_consumo))
+
+            # 🟡 MUDANÇA AQUI: de 'valor_total' para 'valor_total_pedido'
+            # 🟡 MUDANÇA AQUI: de 'cliente_id' para 'entidade_id'
+            sql_exp = f"""
+                SELECT SUM(valor_total_pedido) FROM pedidos 
+                WHERE entidade_id = ? AND status_credito IN ({placeholders})
+            """
+            res_exp = self.repo.db.fetch_one(sql_exp, [ent.id] + list(status_consumo))
+
+            # Tratamento para extrair o valor de sqlite3.Row ou Tuple
+            if res_exp:
+                val = list(dict(res_exp).values())[0] if not isinstance(res_exp, tuple) else res_exp[0]
+                utilizado = float(val or 0.0)
+
+        except Exception as e:
+            # Se ainda der erro, agora saberemos exatamente qual coluna falta
+            print(f"⚠️ Aviso: Erro no cálculo de exposição: {e}")
+
+        disponivel = ent.limite_credito - utilizado
+
         print("\n" + "═" * 80)
         print(f"{'FICHA CADASTRAL DETALHADA':^80}")
         print("═" * 80)
 
-        # Bloco 1: Identificação Principal
         print(f"👤 NOME FANTASIA: {ent.nome_fantasia}")
         print(f"🏢 RAZÃO SOCIAL:  {ent.razao_social}")
         print(f"📄 CPF/CNPJ:      {ent.documento} ({ent.tipo_pessoa})")
         print(f"📅 CADASTRO EM:   {ent.data_cadastramento}")
+
+        status_ficha = "🔴 BLOQUEADO" if ent.bloqueado else "🟢 LIBERADO"
+        print(f"🛡️  STATUS ENTIDADE: {status_ficha}")
         print("-" * 80)
 
-        # Bloco 2: Dados Fiscais e Tributários
         print(
             f"📊 REGIME: {ent.regime_tributario or 'N/A':<15} | IE: {ent.inscricao_estadual or 'ISENTO':<15} | IM: {ent.inscricao_municipal or 'N/A'}")
         print(f"✉️  EMAIL COM.: {ent.email_comercial or 'N/A':<30} | EMAIL NFE: {ent.email_nfe or 'N/A'}")
-        print(f"💰 LIMITE CRÉDITO: R$ {ent.limite_credito:,.2f} | 📅 VALIDADE: {ent.limite_validade}")
+
+        # Exibição dos valores atualizados
+        print(f"💰 LIMITE TOTAL:  R$ {ent.limite_credito:,.2f}")
+        print(f"📉 UTILIZADO:     R$ {utilizado:,.2f} (Aprovados + Faturados)")
+        print(f"✅ DISPONÍVEL:    R$ {disponivel:,.2f}")
         print(f"📝 OBSERVAÇÕES: {ent.observacoes or 'Nenhum registro.'}")
         print("-" * 80)
 
-        # Bloco 3: Quadro Societário (Se for PJ ou tiver vínculos)
+        # Sócios
         if ent.socios:
             titulo = "SÓCIOS / PROPRIETÁRIOS" if ent.tipo_pessoa == 'PJ' else "PARTICIPAÇÕES EM EMPRESAS"
             print(f"🔗 {titulo}:")
             for s in ent.socios:
-                print(f"   • {s.nome_snapshot:<35} | Participação: {s.participacao:>5.1f}% | Cargo: {s.cargo}")
+                perc = s.participacao if s.participacao is not None else 0.0
+                print(f"   • {s.nome_snapshot:<35} | Participação: {perc:>5.1f}% | Cargo: {s.cargo}")
             print("-" * 80)
 
-        # Bloco 4: Endereços (Recuperando a visualização completa com Complemento)
+        # Endereços
         if ent.enderecos:
             print("🏠 ENDEREÇOS:")
             for e in ent.enderecos:
@@ -208,7 +240,7 @@ class EntidadeService:
             print("🏠 ENDEREÇOS: Nenhum endereço cadastrado.")
         print("-" * 80)
 
-        # Bloco 5: Contatos
+        # Contatos
         if ent.contatos:
             print("📞 CONTATOS:")
             for c in ent.contatos:
@@ -218,6 +250,7 @@ class EntidadeService:
 
         print("═" * 80)
         input("\n[Pressione Enter para voltar ao menu]")
+
 
     def listar_clientes_resumido(self):
         """OPÇÃO 2: Listagem organizada com larguras fixas e correção de formato."""

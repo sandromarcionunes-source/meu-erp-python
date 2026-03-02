@@ -15,14 +15,14 @@ CREATE_TABLE_ENTIDADES_COMPLETO = """
         indicador_ie TEXT DEFAULT '9',        
         limite_credito REAL DEFAULT 0,
         limite_validade TEXT,
-        bloqueado INTEGER DEFAULT 0, -- 🛠️ CRUCIAL PARA O MOTOR DE CRÉDITO
-        eh_cliente BOOLEAN DEFAULT 0,
-        eh_fornecedor BOOLEAN DEFAULT 0,
-        eh_transportadora BOOLEAN DEFAULT 0,
-        eh_seguradora BOOLEAN DEFAULT 0,
-        data_cadastramento DATETIME DEFAULT CURRENT_TIMESTAMP,
-        observacoes TEXT
-    );
+        bloqueado INTEGER DEFAULT 0,      -- 🟢 INCLUSÃO: Posição 14
+        eh_cliente BOOLEAN DEFAULT 0,     -- 15
+        eh_fornecedor BOOLEAN DEFAULT 0,  -- 16
+        eh_transportadora BOOLEAN DEFAULT 0, -- 17
+        eh_seguradora BOOLEAN DEFAULT 0,     -- 18
+        data_cadastramento DATETIME DEFAULT CURRENT_TIMESTAMP, -- 19
+        observacoes TEXT                  -- 🔴 OBSERVAÇÃO: Posição 20 (Última)
+);
 
     CREATE TABLE IF NOT EXISTS entidade_enderecos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -4,27 +4,27 @@ from models.entidade_enderecos import Endereco
 
 class Entidade:
     def __init__(
-            self,
-            tipo_pessoa: str,
-            nome_fantasia: str,
-            documento: str,
-            razao_social: str | None = None,
-            inscricao_estadual: str | None = None,
-            inscricao_municipal: str | None = None,
-            email_comercial: str | None = None,
-            email_nfe: str | None = None,
-            regime_tributario: str | None = None,
-            indicador_ie: str = "9",
-            limite_credito: float = 0.0,
-            limite_validade: str | None = None,
-            bloqueado: bool = False, # 🛠️ Adicionado aqui
-            observacoes: str | None = None,
-            eh_cliente: bool = False,
-            eh_fornecedor: bool = False,
-            eh_transportadora: bool = False,
-            eh_seguradora: bool = False,
-            id: int | None = None,
-            data_cadastramento: str | None = None
+        self,
+        tipo_pessoa: str,
+        nome_fantasia: str,
+        documento: str,
+        razao_social: str | None = None,
+        inscricao_estadual: str | None = None,
+        inscricao_municipal: str | None = None,
+        email_comercial: str | None = None,
+        email_nfe: str | None = None,
+        regime_tributario: str | None = None,
+        indicador_ie: str = "9",
+        limite_credito: float = 0.0,
+        limite_validade: str | None = None,
+        bloqueado: bool = False,  # 🟢 INCLUSÃO: Posição 14
+        eh_cliente: bool = False,  # 15
+        eh_fornecedor: bool = False,  # 16
+        eh_transportadora: bool = False,  # 17
+        eh_seguradora: bool = False,  # 18
+        data_cadastramento: str | None = None,  # 19
+        observacoes: str | None = None,  # 🟡 ALTERAÇÃO: Posição 20
+        id: int | None = None
     ):
         self.id = id
         self.tipo_pessoa = tipo_pessoa.upper()
@@ -39,16 +39,17 @@ class Entidade:
         self.indicador_ie = str(indicador_ie)
         self.limite_credito = float(limite_credito or 0)
         self.limite_validade = limite_validade
-        self.bloqueado = bool(bloqueado) # 🛠️ Adicionado aqui
-        self.observacoes = observacoes.upper() if observacoes else None
+        self.bloqueado = bool(bloqueado)
         self.eh_cliente = bool(eh_cliente)
         self.eh_fornecedor = bool(eh_fornecedor)
         self.eh_transportadora = bool(eh_transportadora)
         self.eh_seguradora = bool(eh_seguradora)
         self.data_cadastramento = data_cadastramento
+        self.observacoes = observacoes.upper() if observacoes else None
         self.enderecos: list[Endereco] = []
         self.contatos: list[Contato] = []
         self.socios: list[Socio] = []
+
 
     def adicionar_endereco(self, endereco: Endereco) -> None:
         """Adiciona um endereço à lista."""

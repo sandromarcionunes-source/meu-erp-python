@@ -102,15 +102,6 @@ class ProdutoService:
         except ValueError:
             print("\n❌ Erro: Verifique os valores numéricos.")
 
-    # def listar(self):
-    #     itens = self.repo.buscar_todos()
-    #     print("\n" + "═" * 105)
-    #     print(f"{'SKU':<6} | {'DESCRIÇÃO':<40} | {'VENDA':>10} | {'ATUAL':>10} | {'RESERV.':>10}")
-    #     print("─" * 105)
-    #     for i in itens:
-    #         desc = f"{i.nome} {i.marca or ''}".strip()
-    #         print(
-    #             f"{i.codigo_interno:<6} | {desc[:40]:<40} | R${i.preco_venda:>8.2f} | {i.estoque_atual:>10.2f} | {i.estoque_reservado:>10.2f}")
 
     def listar(self):
         itens = self.repo.buscar_todos()
@@ -127,8 +118,6 @@ class ProdutoService:
 
             print(f"{i.codigo_interno:<6} | {desc[:40]:<40} | R${i.preco_venda:>8.2f} | "
                   f"{i.estoque_atual:>10.2f} | {i.estoque_reservado:>10.2f} | {disponivel:>10.2f}")
-
-
 
 
     def consultar_detalhado(self):
@@ -248,4 +237,3 @@ class ProdutoService:
 
         except ValueError:
             print("\n❌ ERRO: Verifique os valores numéricos. Alteração cancelada.")
-

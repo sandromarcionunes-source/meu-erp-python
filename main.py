@@ -15,7 +15,7 @@ from repositories.compra_repository import CompraRepository
 from repositories.emissor_repository import EmissorRepository
 from repositories.seguro_repository import SeguroRepository
 from repositories.analise_credito_repository import AnaliseCreditoRepository
-
+from repositories.nota_fiscal_vendas_repository import NotaFiscalRepository
 
 from services.compra_service import CompraService
 from services.produto_service import ProdutoService
@@ -26,6 +26,7 @@ from services.config_service import ConfigService
 from services.emissor_service import EmissorService
 from services.seguro_service import SeguroService
 from services.analise_credito_service import AnaliseCreditoService
+from services.nota_fiscal_service import NotaFiscalService
 from menus.menu_principal import MenuPrincipal
 
 def rodar_sistema():
@@ -57,7 +58,7 @@ def main():
     repo_emissor = EmissorRepository(db)
     repo_seguro = SeguroRepository(db)
     analise_repo = AnaliseCreditoRepository(db)
-
+    repo_nf_vendas = NotaFiscalRepository(db)
 
     # 3. Inicializa os Serviços
     service_analise = AnaliseCreditoService(analise_repo)
@@ -75,6 +76,12 @@ def main():
     service_configuracao = ConfigService(repo_config)
     service_banco_dados = DatabaseService(db)
     service_emissor = EmissorService(repo_emissor)
+    service_nota_fiscal_vendas = NotaFiscalService(
+        repo_nf_vendas,  # 1. NF
+        repo_emissor,  # 2. Emissor (Sua empresa - DadosEmissor)
+        repo_pedido,  # 3. Pedido
+        repo_produto  # 4. Produto
+    )
 
     # 4. Configura o Menu Principal
     # Mapeamos as opções do menu para as funções 'exibir_menu' de cada serviço
@@ -88,6 +95,7 @@ def main():
         "7": {"nome": "Configuracoes diversas", "funcao": service_configuracao.exibir_menu},
         "8": {"nome": "Banco Dados", "funcao": service_banco_dados.exibir_menu},
         "9": {"nome": "Analise de credito", "funcao": service_analise.exibir_menu},
+        "10": {"nome": "Nota fiscal Vendas", "funcao": service_nota_fiscal_vendas.exibir_menu},
     }
 
     menu = MenuPrincipal(modulos)

@@ -11,6 +11,7 @@ from .formas_pagamento_compras import CREATE_TABLE_FORMAS_PAGAMENTO_COMPRAS as f
 from .tbl_dados_emissor import CREATE_TABLE_DADOS_EMISSOR as dados_emissor_sql
 from .tbl_seguro import CREATE_TABLE_SEGUROS as seguro_sql
 from .analise_schema import CREATE_TABLE_ANALISE_CREDITO as analisador_sql
+from .tbl_nota_fiscal_vendas import CREATE_TABLE_NOTA_FISCAL_VENDAS as nota_fiscal_vendas_sql
 # Lista com todas as tabelas para criação em lote
 
 ALL_TABLES = [
@@ -27,4 +28,5 @@ ALL_TABLES = [
     dados_emissor_sql,
     seguro_sql,
     analisador_sql,
+    nota_fiscal_vendas_sql,
 ]
